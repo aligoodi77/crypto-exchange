@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
-import { loginSchema, registerSchema } from "../schemas/auth.schema";
+import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
 import {
   getCurrentUser,
   loginUser,
   registerUser,
-} from "../services/auth.service";
+} from "../services/auth.service.js";
 
 type AuthenticatedRequest = Request & {
   user?: {

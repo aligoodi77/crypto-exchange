@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { prisma } from "../lib/prisma";
-import { fetchMarketCoins } from "../services/coingecko.service";
+import { prisma } from "../lib/prisma.js";
+import { fetchMarketCoins } from "../services/coingecko.service.js";
 
 export const coinsRouter = Router();
 
@@ -61,8 +61,8 @@ coinsRouter.post("/sync", async (_req, res, next) => {
             marketCap: String(coin.market_cap ?? 0),
             volume24h: String(coin.total_volume ?? 0),
           },
-        })
-      )
+        }),
+      ),
     );
 
     res.json({

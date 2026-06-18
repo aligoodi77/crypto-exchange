@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
-import { prisma } from "../lib/prisma";
-import { signToken } from "../utils/jwt";
-import type { LoginInput, RegisterInput } from "../schemas/auth.schema";
+import { prisma } from "../lib/prisma.js";
+import { signToken } from "../utils/jwt.js";
+import type { LoginInput, RegisterInput } from "../schemas/auth.schema.js";
 
 const SALT_ROUNDS = 10;
 

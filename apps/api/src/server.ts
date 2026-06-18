@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { coinsRouter } from "./routes/coins.routes.js";
 import { authRouter } from "./routes/auth.routes.js";
+import { walletRouter } from "./routes/wallet.routes.js";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/api/coins", coinsRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/wallet", walletRouter);
 
 app.use(
   (
