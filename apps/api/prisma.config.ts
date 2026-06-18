@@ -10,3 +10,6 @@ export default defineConfig({
     url: env("DATABASE_URL"),
   },
 });
+
+/* cd apps/api
+npx prisma studio */
