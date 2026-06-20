@@ -8,6 +8,7 @@ import { coinsRouter } from "./routes/coins.routes.js";
 import { walletRouter } from "./routes/wallet.routes.js";
 import { tradeRouter } from "./routes/trade.routes.js";
 import { AppError } from "./utils/app-error.js";
+import { transactionRouter } from "./routes/transaction.routes.js";
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/coins", coinsRouter);
 app.use("/api/wallet", walletRouter);
 app.use("/api/trades", tradeRouter);
+app.use("/api/transactions", transactionRouter);
 
 app.use(
   (
