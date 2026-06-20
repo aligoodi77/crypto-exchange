@@ -2,15 +2,22 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../utils/app-error.js";
 import {
-  type SellCoinInput,
-  type BuyCoinInput,
-} from "../schemas/trade.schema.js";
+  calculateTradingFee,
+  tradingFeePercent,
+} from "../utils/trading-fee.js";
+import type { BuyCoinInput, SellCoinInput } from "../schemas/trade.schema.js";
 
 export async function buyCoin(userId: string, input: BuyCoinInput) {
   const symbol = input.symbol.toUpperCase();
-  const usdAmount = new Prisma.Decimal(input.usdAmount);
 
-  const result = await prisma.$transaction(async (tx) => {
+  // In amount faghat pooli hast ke user mikhad crypto bekhare.
+  const grossUsd = new Prisma.Decimal(input.usdAmount);
+
+  // Fee va pooli ke vaghean az wallet kam mishe.
+  const fee = calculateTradingFee(grossUsd);
+  const chargedUsd = grossUsd.add(fee);
+
+  return prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({
       where: {
         userId,
@@ -21,8 +28,9 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
       throw new AppError("Wallet not found", 404);
     }
 
-    if (wallet.balanceUsd.lt(usdAmount)) {
-      throw new AppError("Insufficient USD balance", 400);
+    // Balance bayad fee ro ham cover kone.
+    if (wallet.balanceUsd.lt(chargedUsd)) {
+      throw new AppError("Insufficient USD balance including fee", 400);
     }
 
     const coin = await tx.coin.findUnique({
@@ -39,7 +47,8 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
       throw new AppError("Coin price is not valid", 400);
     }
 
-    const coinAmount = usdAmount.div(coin.price);
+    // Tedad coin faghat bar asas grossUsd hesab mishe, na fee.
+    const coinAmount = grossUsd.div(coin.price);
 
     const existingAsset = await tx.walletAsset.findUnique({
       where: {
@@ -51,17 +60,21 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
     });
 
     let newAssetAmount = coinAmount;
-    let newAverageBuyPrice = coin.price;
+
+    // Buy fee ro to average buy price hesab mikonim
+    // ta P/L vaghean hazine real user ro neshon bede.
+    let newAverageBuyPrice = chargedUsd.div(coinAmount);
 
     if (existingAsset) {
-      const oldAmount = existingAsset.amount;
-      const oldAverageBuyPrice = existingAsset.averageBuyPrice;
+      const oldCostBasis = existingAsset.amount.mul(
+        existingAsset.averageBuyPrice,
+      );
 
-      const oldTotalCost = oldAmount.mul(oldAverageBuyPrice);
-      const newTotalCost = oldTotalCost.add(usdAmount);
+      const newTotalCostBasis = oldCostBasis.add(chargedUsd);
 
-      newAssetAmount = oldAmount.add(coinAmount);
-      newAverageBuyPrice = newTotalCost.div(newAssetAmount);
+      newAssetAmount = existingAsset.amount.add(coinAmount);
+
+      newAverageBuyPrice = newTotalCostBasis.div(newAssetAmount);
     }
 
     const updatedWallet = await tx.wallet.update({
@@ -69,7 +82,7 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
         id: wallet.id,
       },
       data: {
-        balanceUsd: wallet.balanceUsd.sub(usdAmount),
+        balanceUsd: wallet.balanceUsd.sub(chargedUsd),
       },
     });
 
@@ -88,7 +101,7 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
         walletId: wallet.id,
         coinId: coin.id,
         amount: coinAmount,
-        averageBuyPrice: coin.price,
+        averageBuyPrice: newAverageBuyPrice,
       },
       include: {
         coin: true,
@@ -102,7 +115,8 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
         type: "BUY",
         amount: coinAmount,
         price: coin.price,
-        total: usdAmount,
+        total: grossUsd,
+        fee,
         status: "SUCCESS",
       },
       include: {
@@ -115,6 +129,7 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
         id: updatedWallet.id,
         balanceUsd: updatedWallet.balanceUsd.toString(),
       },
+
       asset: {
         id: walletAsset.id,
         amount: walletAsset.amount.toString(),
@@ -127,27 +142,32 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
           price: walletAsset.coin.price.toString(),
         },
       },
+
       transaction: {
         id: transaction.id,
         type: transaction.type,
         amount: transaction.amount.toString(),
         price: transaction.price.toString(),
-        total: transaction.total.toString(),
+
+        grossTotal: transaction.total.toString(),
+        fee: transaction.fee.toString(),
+        chargedUsd: chargedUsd.toString(),
+        feePercent: tradingFeePercent.toString(),
+
         status: transaction.status,
         coin: transaction.coin,
         createdAt: transaction.createdAt,
       },
     };
   });
-
-  return result;
 }
 
 export async function sellCoin(userId: string, input: SellCoinInput) {
   const symbol = input.symbol.toUpperCase();
+
   const coinAmountToSell = new Prisma.Decimal(input.coinAmount);
 
-  const result = await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({
       where: {
         userId,
@@ -179,16 +199,20 @@ export async function sellCoin(userId: string, input: SellCoinInput) {
           coinId: coin.id,
         },
       },
-      include: {
-        coin: true,
-      },
     });
 
     if (!asset || asset.amount.lt(coinAmountToSell)) {
       throw new AppError("Insufficient coin balance", 400);
     }
 
-    const totalUsd = coinAmountToSell.mul(coin.price);
+    // Gross yani total sale ghabl az kam shodane fee.
+    const grossUsd = coinAmountToSell.mul(coin.price);
+
+    const fee = calculateTradingFee(grossUsd);
+
+    // Pooli ke vaghean be wallet user ezafe mishe.
+    const receivedUsd = grossUsd.sub(fee);
+
     const remainingAmount = asset.amount.sub(coinAmountToSell);
 
     const updatedWallet = await tx.wallet.update({
@@ -196,7 +220,7 @@ export async function sellCoin(userId: string, input: SellCoinInput) {
         id: wallet.id,
       },
       data: {
-        balanceUsd: wallet.balanceUsd.add(totalUsd),
+        balanceUsd: wallet.balanceUsd.add(receivedUsd),
       },
     });
 
@@ -253,7 +277,8 @@ export async function sellCoin(userId: string, input: SellCoinInput) {
         type: "SELL",
         amount: coinAmountToSell,
         price: coin.price,
-        total: totalUsd,
+        total: grossUsd,
+        fee,
         status: "SUCCESS",
       },
       include: {
@@ -266,19 +291,24 @@ export async function sellCoin(userId: string, input: SellCoinInput) {
         id: updatedWallet.id,
         balanceUsd: updatedWallet.balanceUsd.toString(),
       },
+
       asset: updatedAsset,
+
       transaction: {
         id: transaction.id,
         type: transaction.type,
         amount: transaction.amount.toString(),
         price: transaction.price.toString(),
-        total: transaction.total.toString(),
+
+        grossTotal: transaction.total.toString(),
+        fee: transaction.fee.toString(),
+        receivedUsd: receivedUsd.toString(),
+        feePercent: tradingFeePercent.toString(),
+
         status: transaction.status,
         coin: transaction.coin,
         createdAt: transaction.createdAt,
       },
     };
   });
-
-  return result;
 }

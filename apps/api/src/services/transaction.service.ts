@@ -42,7 +42,20 @@ export async function getMyTransactions(
       type: transaction.type,
       amount: transaction.amount.toString(),
       price: transaction.price.toString(),
-      total: transaction.total.toString(),
+      grossTotal: transaction.total.toString(),
+
+      fee: transaction.fee.toString(),
+
+      chargedUsd:
+        transaction.type === "BUY"
+          ? transaction.total.add(transaction.fee).toString()
+          : null,
+
+      receivedUsd:
+        transaction.type === "SELL"
+          ? transaction.total.sub(transaction.fee).toString()
+          : null,
+
       status: transaction.status,
       createdAt: transaction.createdAt,
 

@@ -9,6 +9,8 @@ import { walletRouter } from "./routes/wallet.routes.js";
 import { tradeRouter } from "./routes/trade.routes.js";
 import { AppError } from "./utils/app-error.js";
 import { transactionRouter } from "./routes/transaction.routes.js";
+import { startCoinSyncCron } from "./jobs/coin-sync.cron.js";
+import { syncCoinMarketData } from "./services/coin-sync.service.js";
 
 const app = express();
 
@@ -66,6 +68,19 @@ app.use(
 
 const port = Number(process.env.PORT) || 4000;
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`API running on http://localhost:${port}`);
+
+  startCoinSyncCron();
+
+  try {
+    console.log("[coin-sync] Running initial sync...");
+    const coins = await syncCoinMarketData();
+
+    console.log(
+      `[coin-sync] Initial sync completed. ${coins.length} coins updated.`,
+    );
+  } catch (error) {
+    console.error("[coin-sync] Initial sync failed:", error);
+  }
 });

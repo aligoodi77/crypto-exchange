@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { fetchMarketCoins } from "../services/coingecko.service.js";
+import { syncCoinMarketData } from "../services/coin-sync.service.js";
+import { AppError } from "../utils/app-error.js";
 
 export const coinsRouter = Router();
 
@@ -34,41 +36,26 @@ coinsRouter.get("/live", async (_req, res, next) => {
   }
 });
 
-coinsRouter.post("/sync", async (_req, res, next) => {
+coinsRouter.post("/sync", async (req, res, next) => {
   try {
-    const liveCoins = await fetchMarketCoins();
+    const syncSecret = req.headers["x-sync-secret"];
 
-    const syncedCoins = await Promise.all(
-      liveCoins.map((coin) =>
-        prisma.coin.upsert({
-          where: {
-            symbol: coin.symbol.toUpperCase(),
-          },
-          update: {
-            name: coin.name,
-            image: coin.image,
-            price: String(coin.current_price ?? 0),
-            change24h: String(coin.price_change_percentage_24h ?? 0),
-            marketCap: String(coin.market_cap ?? 0),
-            volume24h: String(coin.total_volume ?? 0),
-          },
-          create: {
-            name: coin.name,
-            symbol: coin.symbol.toUpperCase(),
-            image: coin.image,
-            price: String(coin.current_price ?? 0),
-            change24h: String(coin.price_change_percentage_24h ?? 0),
-            marketCap: String(coin.market_cap ?? 0),
-            volume24h: String(coin.total_volume ?? 0),
-          },
-        }),
-      ),
-    );
+    if (
+      typeof syncSecret !== "string" ||
+      syncSecret !== process.env.SYNC_SECRET
+    ) {
+      throw new AppError("Unauthorized sync request", 401);
+    }
+
+    const syncedCoins = await syncCoinMarketData();
 
     res.json({
       success: true,
       message: "Coins synced successfully",
-      data: syncedCoins,
+      data: {
+        count: syncedCoins.length,
+        syncedAt: new Date().toISOString(),
+      },
     });
   } catch (error) {
     next(error);
