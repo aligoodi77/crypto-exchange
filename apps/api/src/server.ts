@@ -1,22 +1,35 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+
+import { corsOptions } from "./config/cors.js";
+import { AppError } from "./utils/app-error.js";
+
 import { ZodError } from "zod";
 
 import { authRouter } from "./routes/auth.routes.js";
 import { coinsRouter } from "./routes/coins.routes.js";
 import { walletRouter } from "./routes/wallet.routes.js";
 import { tradeRouter } from "./routes/trade.routes.js";
-import { AppError } from "./utils/app-error.js";
 import { transactionRouter } from "./routes/transaction.routes.js";
 import { startCoinSyncCron } from "./jobs/coin-sync.cron.js";
 import { syncCoinMarketData } from "./services/coin-sync.service.js";
 import { marketRouter } from "./routes/market.routes.js";
+import helmet from "helmet";
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
+app.disable("x-powered-by");
+
+app.use(helmet());
+
+app.use(cors(corsOptions));
+
+app.use(express.json({ limit: "10kb" }));
 
 app.get("/health", (_req, res) => {
   res.json({
@@ -31,6 +44,13 @@ app.use("/api/wallet", walletRouter);
 app.use("/api/trades", tradeRouter);
 app.use("/api/transactions", transactionRouter);
 app.use("/api/markets", marketRouter);
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
 
 app.use(
   (
@@ -60,6 +80,32 @@ app.use(
       });
       return;
     }
+
+    const possibleError = error as {
+      status?: number;
+      type?: string;
+    };
+
+    if (
+      possibleError.status === 413 ||
+      possibleError.type === "entity.too.large"
+    ) {
+      res.status(413).json({
+        success: false,
+        message: "Request body is too large",
+      });
+      return;
+    }
+
+    if (error instanceof SyntaxError) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid JSON body",
+      });
+      return;
+    }
+
+    console.error(error);
 
     res.status(500).json({
       success: false,
