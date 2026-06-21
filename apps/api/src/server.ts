@@ -11,6 +11,7 @@ import { AppError } from "./utils/app-error.js";
 import { transactionRouter } from "./routes/transaction.routes.js";
 import { startCoinSyncCron } from "./jobs/coin-sync.cron.js";
 import { syncCoinMarketData } from "./services/coin-sync.service.js";
+import { marketRouter } from "./routes/market.routes.js";
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use("/api/coins", coinsRouter);
 app.use("/api/wallet", walletRouter);
 app.use("/api/trades", tradeRouter);
 app.use("/api/transactions", transactionRouter);
+app.use("/api/markets", marketRouter);
 
 app.use(
   (
