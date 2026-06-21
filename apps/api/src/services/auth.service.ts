@@ -1,7 +1,13 @@
 import bcrypt from "bcrypt";
 import { prisma } from "../lib/prisma.js";
 import { signToken } from "../utils/jwt.js";
-import type { LoginInput, RegisterInput } from "../schemas/auth.schema.js";
+import type {
+  LoginInput,
+  RegisterInput,
+  UpdateProfileInput,
+  ChangePasswordInput,
+} from "../schemas/auth.schema.js";
+import { AppError } from "../utils/app-error.js";
 
 const SALT_ROUNDS = 10;
 
@@ -114,4 +120,67 @@ export async function getCurrentUser(userId: string) {
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
+}
+
+export async function updateMyProfile(
+  userId: string,
+  input: UpdateProfileInput,
+) {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      name: input.name,
+    },
+  });
+
+  return sanitizeUser(updatedUser);
+}
+
+export async function changeMyPassword(
+  userId: string,
+  input: ChangePasswordInput,
+) {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const isCurrentPasswordValid = await bcrypt.compare(
+    input.currentPassword,
+    user.passwordHash,
+  );
+
+  if (!isCurrentPasswordValid) {
+    throw new AppError("Current password is incorrect", 401);
+  }
+
+  const newPasswordHash = await bcrypt.hash(input.newPassword, SALT_ROUNDS);
+
+  const updatedUser = await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      passwordHash: newPasswordHash,
+    },
+  });
+
+  return sanitizeUser(updatedUser);
 }

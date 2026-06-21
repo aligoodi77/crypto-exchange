@@ -1,8 +1,15 @@
-import jwt from "jsonwebtoken";
+import { randomUUID } from "node:crypto";
+import jwt, { type SignOptions } from "jsonwebtoken";
 
-export type AppJwtPayload = {
+export type TokenClaims = {
   userId: string;
   role: "USER" | "ADMIN";
+};
+
+export type AppJwtPayload = TokenClaims & {
+  jti: string;
+  exp: number;
+  iat?: number;
 };
 
 function getJwtSecret(): string {
@@ -15,10 +22,14 @@ function getJwtSecret(): string {
   return secret;
 }
 
-export function signToken(payload: AppJwtPayload): string {
-  return jwt.sign(payload, getJwtSecret(), {
+export function signToken(payload: TokenClaims): string {
+  const options: SignOptions = {
+    algorithm: "HS256",
     expiresIn: "7d",
-  });
+    jwtid: randomUUID(),
+  };
+
+  return jwt.sign(payload, getJwtSecret(), options);
 }
 
 function isAppJwtPayload(payload: unknown): payload is AppJwtPayload {
@@ -30,12 +41,16 @@ function isAppJwtPayload(payload: unknown): payload is AppJwtPayload {
 
   return (
     typeof data.userId === "string" &&
-    (data.role === "USER" || data.role === "ADMIN")
+    (data.role === "USER" || data.role === "ADMIN") &&
+    typeof data.jti === "string" &&
+    typeof data.exp === "number"
   );
 }
 
 export function verifyToken(token: string): AppJwtPayload {
-  const decoded = jwt.verify(token, getJwtSecret());
+  const decoded = jwt.verify(token, getJwtSecret(), {
+    algorithms: ["HS256"],
+  });
 
   if (!isAppJwtPayload(decoded)) {
     throw new Error("Invalid token payload");

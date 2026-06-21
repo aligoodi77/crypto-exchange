@@ -25,16 +25,18 @@ enum TransactionStatus {
 }
 
 model User {
-  id           String   @id @default(uuid())
+  id           String @id @default(uuid())
   name         String
-  email        String   @unique
+  email        String @unique
   passwordHash String
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         Role   @default(USER)
 
-  wallet       Wallet?
-  transactions Transaction[]
+  wallet        Wallet?
+  transactions  Transaction[]
+  revokedTokens RevokedToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Coin {
@@ -93,4 +95,17 @@ model Transaction {
 
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   coin Coin? @relation(fields: [coinId], references: [id], onDelete: SetNull)
+}
+
+model RevokedToken {
+  id        String   @id @default(uuid())
+  tokenId   String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
