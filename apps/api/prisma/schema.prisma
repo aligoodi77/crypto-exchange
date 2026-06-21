@@ -24,6 +24,10 @@ enum TransactionStatus {
   FAILED
 }
 
+enum VerificationTokenType {
+  EMAIL_VERIFICATION
+}
+
 model User {
   id           String @id @default(uuid())
   name         String
@@ -31,9 +35,12 @@ model User {
   passwordHash String
   role         Role   @default(USER)
 
-  wallet        Wallet?
-  transactions  Transaction[]
-  revokedTokens RevokedToken[]
+  emailVerifiedAt DateTime?
+
+  wallet             Wallet?
+  transactions       Transaction[]
+  revokedTokens      RevokedToken[]
+  verificationTokens VerificationToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -107,5 +114,19 @@ model RevokedToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([expiresAt])
+}
+
+model VerificationToken {
+  id        String                @id @default(uuid())
+  tokenHash String                @unique
+  type      VerificationTokenType
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime              @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
   @@index([expiresAt])
 }

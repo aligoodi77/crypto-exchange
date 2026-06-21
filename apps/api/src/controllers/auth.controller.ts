@@ -13,6 +13,12 @@ import {
   changeMyPassword,
 } from "../services/auth.service.js";
 import { revokeToken } from "../services/token.service.js";
+import {
+  createAndSendVerificationEmail,
+  verifyEmailByToken,
+} from "../services/email-verification.service.js";
+
+import { verifyEmailQuerySchema } from "../schemas/auth.schema.js";
 
 type AuthenticatedRequest = Request & {
   user?: {
@@ -157,6 +163,52 @@ export async function logoutController(
       success: true,
       message: "Logged out successfully",
       data: result.expiresAt,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyEmailController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { token } = verifyEmailQuerySchema.parse(req.query);
+
+    const result = await verifyEmailByToken(token);
+
+    res.json({
+      success: true,
+      message: "Email verified successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resendVerificationEmailController(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+      return;
+    }
+
+    const result = await createAndSendVerificationEmail(req.user.userId);
+
+    res.json({
+      success: true,
+      message: "Verification email sent successfully",
+      data: result,
     });
   } catch (error) {
     next(error);

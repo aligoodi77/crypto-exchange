@@ -8,6 +8,8 @@ import {
   updateProfileController,
   changePasswordController,
   logoutController,
+  verifyEmailController,
+  resendVerificationEmailController,
 } from "../controllers/auth.controller.js";
 import { authRateLimiter } from "../middlewares/rate-limit.middleware.js";
 
@@ -19,3 +21,9 @@ authRouter.get("/me", authMiddleware, meController);
 authRouter.patch("/me/", authMiddleware, updateProfileController);
 authRouter.patch("/me/password", authMiddleware, changePasswordController);
 authRouter.post("/logout", authMiddleware, logoutController);
+authRouter.get("/verify-email", verifyEmailController);
+authRouter.post(
+  "/resend-verification-email",
+  authMiddleware,
+  resendVerificationEmailController,
+);

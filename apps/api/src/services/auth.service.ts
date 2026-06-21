@@ -8,6 +8,7 @@ import type {
   ChangePasswordInput,
 } from "../schemas/auth.schema.js";
 import { AppError } from "../utils/app-error.js";
+import { createAndSendVerificationEmail } from "./email-verification.service.js";
 
 const SALT_ROUNDS = 10;
 
@@ -16,6 +17,7 @@ function sanitizeUser(user: {
   name: string;
   email: string;
   role: "USER" | "ADMIN";
+  emailVerifiedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -24,6 +26,8 @@ function sanitizeUser(user: {
     name: user.name,
     email: user.email,
     role: user.role,
+    emailVerified: Boolean(user.emailVerifiedAt),
+    emailVerifiedAt: user.emailVerifiedAt,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -55,6 +59,15 @@ export async function registerUser(input: RegisterInput) {
     },
   });
 
+  let verificationEmailSent = true;
+
+  try {
+    await createAndSendVerificationEmail(user.id);
+  } catch (error) {
+    verificationEmailSent = false;
+    console.error("[email-verification] Failed to send:", error);
+  }
+
   const token = signToken({
     userId: user.id,
     role: user.role,
@@ -63,6 +76,8 @@ export async function registerUser(input: RegisterInput) {
   return {
     user: sanitizeUser(user),
     token,
+    emailVerificationRequired: !user.emailVerifiedAt,
+    verificationEmailSent,
   };
 }
 
@@ -116,6 +131,8 @@ export async function getCurrentUser(userId: string) {
     name: user.name,
     email: user.email,
     role: user.role,
+    emailVerified: Boolean(user.emailVerifiedAt),
+    emailVerifiedAt: user.emailVerifiedAt,
     wallet: user.wallet,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,

@@ -32,7 +32,13 @@ export const changePasswordSchema = z
     path: ["newPassword"],
   });
 
+export const verifyEmailQuerySchema = z.object({
+  token: z.string().min(32, "Verification token is invalid"),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type VerifyEmailQueryInput = z.infer<typeof verifyEmailQuerySchema>;
+export type VerifyEmailQuery = z.infer<typeof verifyEmailQuerySchema>;
