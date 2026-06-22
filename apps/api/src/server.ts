@@ -19,6 +19,9 @@ import { adminRouter } from "./routes/admin.routes.js";
 
 import helmet from "helmet";
 
+import { createServer } from "node:http";
+import { initializeSocketServer } from "./realtime/socket.server.js";
+
 const app = express();
 
 if (process.env.NODE_ENV === "production") {
@@ -118,9 +121,13 @@ app.use(
   },
 );
 
+const httpServer = createServer(app);
+
+initializeSocketServer(httpServer);
+
 const port = Number(process.env.PORT) || 4000;
 
-app.listen(port, async () => {
+httpServer.listen(port, async () => {
   console.log(`API running on http://localhost:${port}`);
 
   startCoinSyncCron();

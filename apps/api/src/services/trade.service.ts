@@ -6,6 +6,10 @@ import {
   tradingFeePercent,
 } from "../utils/trading-fee.js";
 import type { BuyCoinInput, SellCoinInput } from "../schemas/trade.schema.js";
+import {
+  emitPortfolioUpdated,
+  emitTradeCompleted,
+} from "../realtime/socket.emitters.js";
 
 export async function buyCoin(userId: string, input: BuyCoinInput) {
   const symbol = input.symbol.toUpperCase();
@@ -16,8 +20,7 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
   // Fee va pooli ke vaghean az wallet kam mishe.
   const fee = calculateTradingFee(grossUsd);
   const chargedUsd = grossUsd.add(fee);
-
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({
       where: {
         userId,
@@ -160,6 +163,18 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
       },
     };
   });
+  try {
+    emitPortfolioUpdated(userId, "BUY");
+
+    emitTradeCompleted(userId, {
+      type: "BUY",
+      symbol,
+    });
+  } catch (error) {
+    console.error("[socket] Failed to emit buy updates:", error);
+  }
+
+  return result;
 }
 
 export async function sellCoin(userId: string, input: SellCoinInput) {

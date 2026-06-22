@@ -8,16 +8,19 @@ const allowedOrigins = (
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+export function isOriginAllowed(origin?: string) {
+  // curl, Postman, React Native, server-to-server request
+  // Origin header nadaran.
+  if (!origin) {
+    return true;
+  }
+
+  return allowedOrigins.includes(origin);
+}
+
 export const corsOptions: CorsOptions = {
   origin(origin, callback) {
-    // curl, Postman, mobile app, server-to-server request
-    // Origin header nadaran.
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
-
-    if (allowedOrigins.includes(origin)) {
+    if (isOriginAllowed(origin)) {
       callback(null, true);
       return;
     }
