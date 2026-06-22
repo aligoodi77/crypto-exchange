@@ -15,6 +15,8 @@ import { transactionRouter } from "./routes/transaction.routes.js";
 import { startCoinSyncCron } from "./jobs/coin-sync.cron.js";
 import { syncCoinMarketData } from "./services/coin-sync.service.js";
 import { marketRouter } from "./routes/market.routes.js";
+import { adminRouter } from "./routes/admin.routes.js";
+
 import helmet from "helmet";
 
 const app = express();
@@ -44,6 +46,8 @@ app.use("/api/wallet", walletRouter);
 app.use("/api/trades", tradeRouter);
 app.use("/api/transactions", transactionRouter);
 app.use("/api/markets", marketRouter);
+
+app.use("/api/admin", adminRouter);
 
 app.use((req, res) => {
   res.status(404).json({

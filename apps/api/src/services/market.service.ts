@@ -8,7 +8,9 @@ export async function getMarkets(query: GetMarketsQuery) {
 
   const skip = (page - 1) * limit;
 
-  const where: Prisma.CoinWhereInput = {};
+  const where: Prisma.CoinWhereInput = {
+    isActive: true,
+  };
 
   if (search) {
     where.OR = [

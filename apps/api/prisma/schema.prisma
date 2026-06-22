@@ -47,19 +47,24 @@ model User {
 }
 
 model Coin {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   name      String
-  symbol    String   @unique
+  symbol    String  @unique
   image     String?
-  price     Decimal  @default(0)
-  change24h Decimal  @default(0)
-  marketCap Decimal  @default(0)
-  volume24h Decimal  @default(0)
+  price     Decimal @default(0)
+  change24h Decimal @default(0)
+  marketCap Decimal @default(0)
+  volume24h Decimal @default(0)
+
+  isActive Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assets       WalletAsset[]
+  walletAssets WalletAsset[]
   transactions Transaction[]
+
+  @@index([isActive])
 }
 
 model Wallet {

@@ -9,6 +9,9 @@ export const coinsRouter = Router();
 coinsRouter.get("/", async (_req, res, next) => {
   try {
     const coins = await prisma.coin.findMany({
+      where: {
+        isActive: true,
+      },
       orderBy: {
         marketCap: "desc",
       },

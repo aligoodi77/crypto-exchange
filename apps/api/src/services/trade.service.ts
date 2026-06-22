@@ -39,8 +39,8 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
       },
     });
 
-    if (!coin) {
-      throw new AppError("Coin not found", 404);
+    if (!coin.isActive) {
+      throw new AppError("This coin is currently unavailable for trading", 400);
     }
 
     if (coin.price.lte(0)) {
@@ -184,8 +184,8 @@ export async function sellCoin(userId: string, input: SellCoinInput) {
       },
     });
 
-    if (!coin) {
-      throw new AppError("Coin not found", 404);
+    if (!coin.isActive) {
+      throw new AppError("This coin is currently unavailable for trading", 400);
     }
 
     if (coin.price.lte(0)) {
