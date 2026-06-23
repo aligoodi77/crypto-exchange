@@ -34,6 +34,7 @@ model User {
   email        String @unique
   passwordHash String
   role         Role   @default(USER)
+  tokenVersion Int    @default(0)
 
   emailVerifiedAt DateTime?
 
@@ -107,6 +108,8 @@ model Transaction {
 
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   coin Coin? @relation(fields: [coinId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
 }
 
 model RevokedToken {

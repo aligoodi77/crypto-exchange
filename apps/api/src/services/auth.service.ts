@@ -41,7 +41,7 @@ export async function registerUser(input: RegisterInput) {
   });
 
   if (existingUser) {
-    throw new Error("Email is already registered");
+    throw new AppError("Email is already registered", 409);
   }
 
   const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
@@ -71,6 +71,7 @@ export async function registerUser(input: RegisterInput) {
   const token = signToken({
     userId: user.id,
     role: user.role,
+    tokenVersion: user.tokenVersion,
   });
 
   return {
@@ -89,7 +90,7 @@ export async function loginUser(input: LoginInput) {
   });
 
   if (!user) {
-    throw new Error("Invalid email or password");
+    throw new AppError("Invalid email or password", 401);
   }
 
   const isPasswordValid = await bcrypt.compare(
@@ -98,12 +99,13 @@ export async function loginUser(input: LoginInput) {
   );
 
   if (!isPasswordValid) {
-    throw new Error("Invalid email or password");
+    throw new AppError("Invalid email or password", 401);
   }
 
   const token = signToken({
     userId: user.id,
     role: user.role,
+    tokenVersion: user.tokenVersion,
   });
 
   return {
@@ -123,7 +125,7 @@ export async function getCurrentUser(userId: string) {
   });
 
   if (!user) {
-    throw new Error("User not found");
+    throw new AppError("User not found", 404);
   }
 
   return {
@@ -150,7 +152,7 @@ export async function updateMyProfile(
   });
 
   if (!user) {
-    throw new Error("User not found");
+    throw new AppError("User not found", 404);
   }
 
   const updatedUser = await prisma.user.update({
@@ -196,6 +198,9 @@ export async function changeMyPassword(
     },
     data: {
       passwordHash: newPasswordHash,
+      tokenVersion: {
+        increment: 1,
+      },
     },
   });
 

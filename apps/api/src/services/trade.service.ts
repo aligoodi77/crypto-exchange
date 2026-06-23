@@ -15,6 +15,38 @@ import {
   emitTradeCompleted,
 } from "../realtime/socket.emitters.js";
 
+const TRADE_TRANSACTION_MAX_RETRIES = 3;
+
+function isSerializableConflict(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2034"
+  );
+}
+
+async function runSerializableTrade<T>(
+  callback: (tx: Prisma.TransactionClient) => Promise<T>,
+) {
+  for (let attempt = 1; attempt <= TRADE_TRANSACTION_MAX_RETRIES; attempt += 1) {
+    try {
+      return await prisma.$transaction(callback, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      });
+    } catch (error) {
+      if (
+        attempt < TRADE_TRANSACTION_MAX_RETRIES &&
+        isSerializableConflict(error)
+      ) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new AppError("Trade could not be completed. Please try again.", 409);
+}
+
 export async function buyCoin(userId: string, input: BuyCoinInput) {
   const symbol = input.symbol.toUpperCase();
 
@@ -25,7 +57,7 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
   const fee = calculateTradingFee(grossUsd);
   const chargedUsd = grossUsd.add(fee);
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await runSerializableTrade(async (tx) => {
     const wallet = await tx.wallet.findUnique({
       where: {
         userId,
@@ -201,7 +233,7 @@ export async function sellCoin(userId: string, input: SellCoinInput) {
 
   const coinAmountToSell = new Prisma.Decimal(input.coinAmount);
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await runSerializableTrade(async (tx) => {
     const wallet = await tx.wallet.findUnique({
       where: {
         userId,

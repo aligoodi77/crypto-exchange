@@ -50,3 +50,19 @@ export async function isTokenRevoked(tokenId: string) {
 
   return Boolean(revokedToken);
 }
+
+export async function isTokenVersionCurrent(
+  userId: string,
+  tokenVersion: number,
+) {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      tokenVersion: true,
+    },
+  });
+
+  return Boolean(user && user.tokenVersion === tokenVersion);
+}

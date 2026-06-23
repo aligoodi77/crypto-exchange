@@ -1,4 +1,7 @@
 const COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3";
+const COINGECKO_TIMEOUT_MS = 5000;
+const COINGECKO_CACHE_TTL_MS = 60_000;
+const COINGECKO_MAX_ATTEMPTS = 3;
 
 const DEFAULT_COIN_IDS = [
   "bitcoin",
@@ -19,7 +22,43 @@ type CoinGeckoMarketCoin = {
   total_volume: number | null;
 };
 
+type CachedMarketCoins = {
+  expiresAt: number;
+  data: CoinGeckoMarketCoin[];
+};
+
+const marketCoinsCache = new Map<string, CachedMarketCoins>();
+
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function fetchWithTimeout(url: string, headers: Record<string, string>) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, COINGECKO_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      headers,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function fetchMarketCoins(ids = DEFAULT_COIN_IDS) {
+  const cacheKey = [...ids].sort().join(",");
+  const cached = marketCoinsCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
   const params = new URLSearchParams({
     vs_currency: "usd",
     ids: ids.join(","),
@@ -36,14 +75,33 @@ export async function fetchMarketCoins(ids = DEFAULT_COIN_IDS) {
     headers["x-cg-demo-api-key"] = process.env.COINGECKO_API_KEY;
   }
 
-  const response = await fetch(`${COINGECKO_BASE_URL}/coins/markets?${params}`, {
-    headers,
-  });
+  const url = `${COINGECKO_BASE_URL}/coins/markets?${params}`;
 
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(`CoinGecko API failed: ${response.status} ${message}`);
+  for (let attempt = 1; attempt <= COINGECKO_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(url, headers);
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(`CoinGecko API failed: ${response.status} ${message}`);
+      }
+
+      const data = (await response.json()) as CoinGeckoMarketCoin[];
+
+      marketCoinsCache.set(cacheKey, {
+        data,
+        expiresAt: Date.now() + COINGECKO_CACHE_TTL_MS,
+      });
+
+      return data;
+    } catch (error) {
+      if (attempt === COINGECKO_MAX_ATTEMPTS) {
+        throw error;
+      }
+
+      await sleep(200 * attempt);
+    }
   }
 
-  return response.json() as Promise<CoinGeckoMarketCoin[]>;
+  throw new Error("CoinGecko API failed");
 }

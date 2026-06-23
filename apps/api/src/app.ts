@@ -1,22 +1,49 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+
+import { corsOptions } from "./config/cors.js";
+import { authRouter } from "./routes/auth.routes.js";
+import { coinsRouter } from "./routes/coins.routes.js";
+import { walletRouter } from "./routes/wallet.routes.js";
+import { tradeRouter } from "./routes/trade.routes.js";
+import { transactionRouter } from "./routes/transaction.routes.js";
+import { marketRouter } from "./routes/market.routes.js";
+import { adminRouter } from "./routes/admin.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 export const app = express();
 
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    credentials: true,
-  }),
-);
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
 
-app.use(express.json());
+app.disable("x-powered-by");
 
-app.get("/health", (req, res) => {
+app.use(helmet());
+app.use(cors(corsOptions));
+app.use(express.json({ limit: "10kb" }));
+
+app.get("/health", (_req, res) => {
   res.json({
     success: true,
-    message: "CoinBarrier API is running",
+    message: "API is running",
+  });
+});
+
+app.use("/api/auth", authRouter);
+app.use("/api/coins", coinsRouter);
+app.use("/api/wallet", walletRouter);
+app.use("/api/trades", tradeRouter);
+app.use("/api/transactions", transactionRouter);
+app.use("/api/markets", marketRouter);
+app.use("/api/admin", adminRouter);
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
   });
 });
 

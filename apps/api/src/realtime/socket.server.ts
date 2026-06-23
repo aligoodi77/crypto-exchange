@@ -98,11 +98,17 @@ export function initializeSocketServer(httpServer: HttpServer) {
         select: {
           id: true,
           role: true,
+          tokenVersion: true,
         },
       });
 
       if (!user) {
         next(new Error("Unauthorized: user not found"));
+        return;
+      }
+
+      if (user.tokenVersion !== payload.tokenVersion) {
+        next(new Error("Unauthorized: session expired"));
         return;
       }
 
@@ -158,5 +164,9 @@ export function getIO() {
 }
 
 export function disconnectTokenSockets(tokenId: string) {
-  getIO().in(getTokenRoom(tokenId)).disconnectSockets(true);
+  io?.in(getTokenRoom(tokenId)).disconnectSockets(true);
+}
+
+export function disconnectUserSockets(userId: string) {
+  io?.in(getUserRoom(userId)).disconnectSockets(true);
 }

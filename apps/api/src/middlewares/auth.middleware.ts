@@ -1,5 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
-import { isTokenRevoked } from "../services/token.service.js";
+import {
+  isTokenRevoked,
+  isTokenVersionCurrent,
+} from "../services/token.service.js";
 import { verifyToken, type AppJwtPayload } from "../utils/jwt.js";
 
 export type AuthenticatedRequest = Request & {
@@ -50,6 +53,19 @@ export async function authMiddleware(
       res.status(401).json({
         success: false,
         message: "Token has been revoked. Please log in again.",
+      });
+      return;
+    }
+
+    const tokenVersionCurrent = await isTokenVersionCurrent(
+      payload.userId,
+      payload.tokenVersion,
+    );
+
+    if (!tokenVersionCurrent) {
+      res.status(401).json({
+        success: false,
+        message: "Session expired. Please log in again.",
       });
       return;
     }

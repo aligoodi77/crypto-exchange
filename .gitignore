@@ -8,8 +8,8 @@ node_modules
 .env.*
 **/.env
 **/.env.*
-.env.example
-**/.env.example
+!.env.example
+!**/.env.example
 
 # build outputs
 .next
@@ -17,6 +17,8 @@ node_modules
 dist
 build
 out
+coverage
+**/coverage
 
 # logs
 npm-debug.log*

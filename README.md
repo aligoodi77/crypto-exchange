@@ -60,16 +60,16 @@ coinbarrier-exchange/
 
 ## Current Progress
 
-The project is currently in the initial setup phase.
+The project has an active API and web app implementation.
 
-Completed:
+Implemented backend areas include:
 
-- Project folder structure
-- PostgreSQL database with Docker
-- Prisma setup
-- Initial database schema
-- Environment configuration
-- Backend dependencies installed
+- Authentication with JWT, token revocation, email verification, and role checks
+- Wallet, market, coin, trade, transaction, and admin API routes
+- Prisma schema and migrations
+- Coin market sync job
+- Socket.IO realtime updates
+- Zod validation and centralized error handling
 
 ## Database Models
 
@@ -110,37 +110,59 @@ git clone https://github.com/aligoodi77/coinbarrier-exchange.git
 cd coinbarrier-exchange
 ```
 
-### 2. Start PostgreSQL with Docker
+### 2. Configure Docker environment
+
+Create a root `.env` from `.env.example` and set a local database password:
+
+```bash
+cp .env.example .env
+```
+
+If the old password was ever used outside local development, rotate it.
+
+### 3. Start PostgreSQL with Docker
 
 ```bash
 docker compose up -d
 ```
 
-### 3. Setup API environment
+### 4. Setup API environment
 
-Create an `.env` file inside `apps/api`:
+Create an `.env` file inside `apps/api` from `apps/api/.env.example`:
 
-```env
-DATABASE_URL="postgresql://ali:123456@localhost:5432/crypto_exchange?schema=public"
-PORT=4000
-JWT_SECRET="your-secret-key"
+```bash
+cp apps/api/.env.example apps/api/.env
 ```
 
-### 4. Install API dependencies
+Set `DATABASE_URL` to match your root `.env` values, for example:
+
+```env
+DATABASE_URL="postgresql://crypto_exchange_user:replace-with-a-local-dev-password@localhost:5432/crypto_exchange?schema=public"
+JWT_SECRET="replace-with-a-long-random-secret"
+SYNC_SECRET="replace-with-a-long-random-secret"
+```
+
+### 5. Install API dependencies
 
 ```bash
 cd apps/api
 npm install
 ```
 
-### 5. Run Prisma migration
+### 6. Run Prisma migration
 
 ```bash
 npx prisma migrate dev --name init
 npx prisma generate
 ```
 
-### 6. Open Prisma Studio
+### 7. Run API checks
+
+```bash
+npm run typecheck
+```
+
+### 8. Open Prisma Studio
 
 ```bash
 npx prisma studio

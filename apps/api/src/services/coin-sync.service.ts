@@ -2,7 +2,23 @@ import { prisma } from "../lib/prisma.js";
 import { emitMarketPricesUpdated } from "../realtime/socket.emitters.js";
 import { fetchMarketCoins } from "./coingecko.service.js";
 
+let syncInFlight: ReturnType<typeof syncCoinMarketDataInternal> | null = null;
+
 export async function syncCoinMarketData() {
+  if (syncInFlight) {
+    return syncInFlight;
+  }
+
+  syncInFlight = syncCoinMarketDataInternal();
+
+  try {
+    return await syncInFlight;
+  } finally {
+    syncInFlight = null;
+  }
+}
+
+async function syncCoinMarketDataInternal() {
   const liveCoins = await fetchMarketCoins();
 
   const syncedCoins = await Promise.all(
@@ -34,7 +50,11 @@ export async function syncCoinMarketData() {
     ),
   );
 
-  emitMarketPricesUpdated(syncedCoins);
+  try {
+    emitMarketPricesUpdated(syncedCoins);
+  } catch (error) {
+    console.error("[socket] Failed to emit market sync updates:", error);
+  }
 
   return syncedCoins;
 }

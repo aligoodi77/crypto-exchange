@@ -4,6 +4,7 @@ import jwt, { type SignOptions } from "jsonwebtoken";
 export type TokenClaims = {
   userId: string;
   role: "USER" | "ADMIN";
+  tokenVersion: number;
 };
 
 export type AppJwtPayload = TokenClaims & {
@@ -42,6 +43,7 @@ function isAppJwtPayload(payload: unknown): payload is AppJwtPayload {
   return (
     typeof data.userId === "string" &&
     (data.role === "USER" || data.role === "ADMIN") &&
+    typeof data.tokenVersion === "number" &&
     typeof data.jti === "string" &&
     typeof data.exp === "number"
   );

@@ -19,14 +19,11 @@ import {
 } from "../services/email-verification.service.js";
 
 import { verifyEmailQuerySchema } from "../schemas/auth.schema.js";
-import { disconnectTokenSockets } from "../realtime/socket.server.js";
-
-type AuthenticatedRequest = Request & {
-  user?: {
-    userId: string;
-    role: "USER" | "ADMIN";
-  };
-};
+import {
+  disconnectTokenSockets,
+  disconnectUserSockets,
+} from "../realtime/socket.server.js";
+import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 
 export async function registerController(
   req: Request,
@@ -134,6 +131,8 @@ export async function changePasswordController(
     const input = changePasswordSchema.parse(req.body);
 
     const user = await changeMyPassword(req.user.userId, input);
+    disconnectUserSockets(req.user.userId);
+
     res.json({
       success: true,
       message: "Password updated successfully",
