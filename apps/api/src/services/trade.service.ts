@@ -1,11 +1,15 @@
 import { Prisma } from "@prisma/client";
+
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../utils/app-error.js";
+
 import {
   calculateTradingFee,
   tradingFeePercent,
 } from "../utils/trading-fee.js";
+
 import type { BuyCoinInput, SellCoinInput } from "../schemas/trade.schema.js";
+
 import {
   emitPortfolioUpdated,
   emitTradeCompleted,
@@ -14,12 +18,13 @@ import {
 export async function buyCoin(userId: string, input: BuyCoinInput) {
   const symbol = input.symbol.toUpperCase();
 
-  // In amount faghat pooli hast ke user mikhad crypto bekhare.
+  // Pooli ke user mikhad crypto bekhare.
   const grossUsd = new Prisma.Decimal(input.usdAmount);
 
-  // Fee va pooli ke vaghean az wallet kam mishe.
+  // Fee va majmoo pooli ke az wallet kam mishe.
   const fee = calculateTradingFee(grossUsd);
   const chargedUsd = grossUsd.add(fee);
+
   const result = await prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({
       where: {
@@ -31,7 +36,6 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
       throw new AppError("Wallet not found", 404);
     }
 
-    // Balance bayad fee ro ham cover kone.
     if (wallet.balanceUsd.lt(chargedUsd)) {
       throw new AppError("Insufficient USD balance including fee", 400);
     }
@@ -42,6 +46,10 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
       },
     });
 
+    if (!coin) {
+      throw new AppError("Coin not found", 404);
+    }
+
     if (!coin.isActive) {
       throw new AppError("This coin is currently unavailable for trading", 400);
     }
@@ -50,7 +58,7 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
       throw new AppError("Coin price is not valid", 400);
     }
 
-    // Tedad coin faghat bar asas grossUsd hesab mishe, na fee.
+    // Fee to tedad crypto hesab nemishe.
     const coinAmount = grossUsd.div(coin.price);
 
     const existingAsset = await tx.walletAsset.findUnique({
@@ -64,8 +72,8 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
 
     let newAssetAmount = coinAmount;
 
-    // Buy fee ro to average buy price hesab mikonim
-    // ta P/L vaghean hazine real user ro neshon bede.
+    // Average buy price fee ro ham dar nazar migire
+    // ta P/L hazine vagheii user ro neshon bede.
     let newAverageBuyPrice = chargedUsd.div(coinAmount);
 
     if (existingAsset) {
@@ -158,11 +166,22 @@ export async function buyCoin(userId: string, input: BuyCoinInput) {
         feePercent: tradingFeePercent.toString(),
 
         status: transaction.status,
-        coin: transaction.coin,
+
+        coin: transaction.coin
+          ? {
+              id: transaction.coin.id,
+              name: transaction.coin.name,
+              symbol: transaction.coin.symbol,
+              image: transaction.coin.image,
+            }
+          : null,
+
         createdAt: transaction.createdAt,
       },
     };
   });
+
+  // Emit bayad baad az success shodan database transaction bashe.
   try {
     emitPortfolioUpdated(userId, "BUY");
 
@@ -182,7 +201,7 @@ export async function sellCoin(userId: string, input: SellCoinInput) {
 
   const coinAmountToSell = new Prisma.Decimal(input.coinAmount);
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({
       where: {
         userId,
@@ -198,6 +217,10 @@ export async function sellCoin(userId: string, input: SellCoinInput) {
         symbol,
       },
     });
+
+    if (!coin) {
+      throw new AppError("Coin not found", 404);
+    }
 
     if (!coin.isActive) {
       throw new AppError("This coin is currently unavailable for trading", 400);
@@ -220,7 +243,7 @@ export async function sellCoin(userId: string, input: SellCoinInput) {
       throw new AppError("Insufficient coin balance", 400);
     }
 
-    // Gross yani total sale ghabl az kam shodane fee.
+    // Majmoo forosh ghabl az fee.
     const grossUsd = coinAmountToSell.mul(coin.price);
 
     const fee = calculateTradingFee(grossUsd);
@@ -321,9 +344,32 @@ export async function sellCoin(userId: string, input: SellCoinInput) {
         feePercent: tradingFeePercent.toString(),
 
         status: transaction.status,
-        coin: transaction.coin,
+
+        coin: transaction.coin
+          ? {
+              id: transaction.coin.id,
+              name: transaction.coin.name,
+              symbol: transaction.coin.symbol,
+              image: transaction.coin.image,
+            }
+          : null,
+
         createdAt: transaction.createdAt,
       },
     };
   });
+
+  // Faghat vaghti sell transaction ba movafaghiat commit shod emit mikonim.
+  try {
+    emitPortfolioUpdated(userId, "SELL");
+
+    emitTradeCompleted(userId, {
+      type: "SELL",
+      symbol,
+    });
+  } catch (error) {
+    console.error("[socket] Failed to emit sell updates:", error);
+  }
+
+  return result;
 }

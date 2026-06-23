@@ -19,6 +19,7 @@ import {
 } from "../services/email-verification.service.js";
 
 import { verifyEmailQuerySchema } from "../schemas/auth.schema.js";
+import { disconnectTokenSockets } from "../realtime/socket.server.js";
 
 type AuthenticatedRequest = Request & {
   user?: {
@@ -158,6 +159,7 @@ export async function logoutController(
     }
 
     const result = await revokeToken(req.user);
+    disconnectTokenSockets(req.user.jti);
 
     res.json({
       success: true,
