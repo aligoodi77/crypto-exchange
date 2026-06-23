@@ -13,6 +13,8 @@ import { transactionRouter } from "./routes/transaction.routes.js";
 import { marketRouter } from "./routes/market.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
+import swaggerUi from "swagger-ui-express";
+import { openApiDocument } from "./docs/openapi.js";
 
 export const app = express();
 
@@ -41,6 +43,18 @@ app.use("/api/transactions", transactionRouter);
 app.use("/api/markets", marketRouter);
 app.use("/api/admin", adminRouter);
 
+app.get("/api-docs.json", (_req, res) => {
+  res.json(openApiDocument);
+});
+
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(openApiDocument, {
+    explorer: true,
+    customSiteTitle: "Crypto Exchange API Docs",
+  }),
+);
 app.use((req, res) => {
   res.status(404).json({
     success: false,
