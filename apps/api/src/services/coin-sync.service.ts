@@ -50,11 +50,7 @@ async function syncCoinMarketDataInternal() {
     ),
   );
 
-  try {
-    emitMarketPricesUpdated(syncedCoins);
-  } catch (error) {
-    console.error("[socket] Failed to emit market sync updates:", error);
-  }
+  emitMarketPricesUpdated(syncedCoins);
 
   return syncedCoins;
 }

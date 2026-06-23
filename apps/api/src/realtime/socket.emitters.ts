@@ -1,7 +1,7 @@
 import type { Coin } from "@prisma/client";
 
 import { SOCKET_EVENTS, type TradeEventType } from "./socket.events.js";
-import { getIO } from "./socket.server.js";
+import { getIO, getOptionalIO } from "./socket.server.js";
 import { ADMIN_ROOM, getUserRoom, MARKET_ROOM } from "./socket.rooms.js";
 
 function serializeMarketCoin(coin: Coin) {
@@ -21,24 +21,17 @@ function serializeMarketCoin(coin: Coin) {
 }
 
 export function emitMarketPricesUpdated(coins: Coin[]) {
-  const occurredAt = new Date().toISOString();
+  const io = getOptionalIO();
 
-  const activeCoins = coins.filter((coin) => coin.isActive);
-
-  const io = getIO();
-
-  if (activeCoins.length > 0) {
-    io.to(MARKET_ROOM).emit(SOCKET_EVENTS.MARKET_PRICES_UPDATED, {
-      occurredAt,
-      source: "coin-sync",
-      coins: activeCoins.map(serializeMarketCoin),
-    });
+  // Standalone cron ya sync script Socket.IO nadare.
+  // Pas event emit nemishe, vali sync ham fail nemishe.
+  if (!io) {
+    return;
   }
 
-  io.to(ADMIN_ROOM).emit(SOCKET_EVENTS.ADMIN_MARKET_SYNC_COMPLETED, {
-    occurredAt,
-    totalSyncedCoins: coins.length,
-    activeSyncedCoins: activeCoins.length,
+  io.to(MARKET_ROOM).emit("market:prices-updated", {
+    occurredAt: new Date().toISOString(),
+    coins: coins.map(serializeMarketCoin),
   });
 }
 

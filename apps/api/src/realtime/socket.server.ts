@@ -170,3 +170,7 @@ export function disconnectTokenSockets(tokenId: string) {
 export function disconnectUserSockets(userId: string) {
   io?.in(getUserRoom(userId)).disconnectSockets(true);
 }
+
+export function getOptionalIO(): Server | null {
+  return io ?? null;
+}

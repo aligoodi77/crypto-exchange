@@ -11,9 +11,7 @@ const envSchema = z
 
     DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
-    JWT_SECRET: z
-      .string()
-      .min(32, "JWT_SECRET must be at least 32 characters"),
+    JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
 
     SYNC_SECRET: z
       .string()
@@ -45,6 +43,11 @@ const envSchema = z
     EMAIL_FROM: z.string().optional(),
 
     RESEND_API_KEY: z.string().optional(),
+
+    ENABLE_INTERNAL_CRON: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
 
     EMAIL_VERIFICATION_TOKEN_TTL_MINUTES: z.coerce
       .number()
@@ -100,4 +103,5 @@ export const env = {
   resendApiKey: parsedEnv.data.RESEND_API_KEY,
   emailVerificationTokenTtlMinutes:
     parsedEnv.data.EMAIL_VERIFICATION_TOKEN_TTL_MINUTES,
+  enableInternalCron: parsedEnv.data.ENABLE_INTERNAL_CRON,
 };
