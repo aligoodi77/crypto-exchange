@@ -80,12 +80,27 @@ Current Prisma models:
 - Wallet
 - WalletAsset
 - Transaction
+- RevokedToken
+- VerificationToken
+- TradeIdempotencyKey
 
 Current enums:
 
 - Role
 - TransactionType
 - TransactionStatus
+- VerificationTokenType
+
+## API Notes
+
+Trade endpoints require an `Idempotency-Key` header:
+
+```http
+POST /api/trades/buy
+Idempotency-Key: 6f4c4c1d-8dd8-4a54-9c1d-8dd55f48c481
+```
+
+Reusing the same key with the same request returns the stored result. Reusing it with a different request returns `409 Conflict`.
 
 ## Planned Features
 
@@ -138,8 +153,8 @@ Set `DATABASE_URL` to match your root `.env` values, for example:
 
 ```env
 DATABASE_URL="postgresql://crypto_exchange_user:replace-with-a-local-dev-password@localhost:5432/crypto_exchange?schema=public"
-JWT_SECRET="replace-with-a-long-random-secret"
-SYNC_SECRET="replace-with-a-long-random-secret"
+JWT_SECRET="replace-with-at-least-32-random-characters"
+SYNC_SECRET="replace-with-at-least-16-random-characters"
 ```
 
 ### 5. Install API dependencies

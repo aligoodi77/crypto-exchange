@@ -38,10 +38,11 @@ model User {
 
   emailVerifiedAt DateTime?
 
-  wallet             Wallet?
-  transactions       Transaction[]
-  revokedTokens      RevokedToken[]
-  verificationTokens VerificationToken[]
+  wallet               Wallet?
+  transactions         Transaction[]
+  revokedTokens        RevokedToken[]
+  verificationTokens   VerificationToken[]
+  tradeIdempotencyKeys TradeIdempotencyKey[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -110,6 +111,20 @@ model Transaction {
   coin Coin? @relation(fields: [coinId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
+}
+
+model TradeIdempotencyKey {
+  id          String   @id @default(uuid())
+  userId      String
+  key         String
+  requestHash String
+  response    Json?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([createdAt])
 }
 
 model RevokedToken {

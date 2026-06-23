@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../utils/app-error.js";
+import { env } from "../config/env.js";
 import {
   createRawVerificationToken,
   hashVerificationToken,
@@ -7,18 +8,10 @@ import {
 import { sendVerificationEmail } from "./email.service.js";
 
 function getTokenExpiryDate() {
-  const rawMinutes = process.env.EMAIL_VERIFICATION_TOKEN_TTL_MINUTES || "60";
-
-  const minutes = Number(rawMinutes);
-
-  if (!Number.isFinite(minutes) || minutes <= 0) {
-    throw new Error(
-      "EMAIL_VERIFICATION_TOKEN_TTL_MINUTES must be a positive number",
-    );
-  }
-
   const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + minutes);
+  expiresAt.setMinutes(
+    expiresAt.getMinutes() + env.emailVerificationTokenTtlMinutes,
+  );
 
   return expiresAt;
 }

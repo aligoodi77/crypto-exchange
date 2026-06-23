@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
+import { env } from "../config/env.js";
 import { fetchMarketCoins } from "../services/coingecko.service.js";
 import { syncCoinMarketData } from "../services/coin-sync.service.js";
 import { AppError } from "../utils/app-error.js";
@@ -45,7 +46,7 @@ coinsRouter.post("/sync", async (req, res, next) => {
 
     if (
       typeof syncSecret !== "string" ||
-      syncSecret !== process.env.SYNC_SECRET
+      syncSecret !== env.syncSecret
     ) {
       throw new AppError("Unauthorized sync request", 401);
     }

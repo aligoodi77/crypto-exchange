@@ -1,7 +1,8 @@
 import cron from "node-cron";
+import { env } from "../config/env.js";
 import { syncCoinMarketData } from "../services/coin-sync.service.js";
 
-const cronExpression = process.env.COIN_SYNC_CRON || "*/5 * * * *";
+const cronExpression = env.coinSyncCron;
 
 export function startCoinSyncCron() {
   if (!cron.validate(cronExpression)) {

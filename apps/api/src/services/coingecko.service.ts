@@ -1,3 +1,5 @@
+import { env } from "../config/env.js";
+
 const COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3";
 const COINGECKO_TIMEOUT_MS = 5000;
 const COINGECKO_CACHE_TTL_MS = 60_000;
@@ -71,8 +73,8 @@ export async function fetchMarketCoins(ids = DEFAULT_COIN_IDS) {
 
   const headers: Record<string, string> = {};
 
-  if (process.env.COINGECKO_API_KEY) {
-    headers["x-cg-demo-api-key"] = process.env.COINGECKO_API_KEY;
+  if (env.coingeckoApiKey) {
+    headers["x-cg-demo-api-key"] = env.coingeckoApiKey;
   }
 
   const url = `${COINGECKO_BASE_URL}/coins/markets?${params}`;

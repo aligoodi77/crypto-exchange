@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { env } from "../config/env.js";
 
 type SendVerificationEmailInput = {
   to: string;
@@ -7,9 +8,7 @@ type SendVerificationEmailInput = {
 };
 
 function getVerificationLink(token: string) {
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-
-  return `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
+  return `${env.frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
 }
 
 function escapeHtml(value: string) {
@@ -28,9 +27,7 @@ export async function sendVerificationEmail({
 }: SendVerificationEmailInput) {
   const verificationLink = getVerificationLink(verificationToken);
 
-  const provider = process.env.EMAIL_PROVIDER || "console";
-
-  if (provider === "console") {
+  if (env.emailProvider === "console") {
     console.log("\n[email-verification]");
     console.log(`To: ${to}`);
     console.log(`Verify link: ${verificationLink}\n`);
@@ -41,23 +38,16 @@ export async function sendVerificationEmail({
     };
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
-
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY is missing in .env");
+  if (!env.resendApiKey || !env.emailFrom) {
+    throw new Error("Resend email configuration is missing");
   }
 
-  if (!from) {
-    throw new Error("EMAIL_FROM is missing in .env");
-  }
-
-  const resend = new Resend(apiKey);
+  const resend = new Resend(env.resendApiKey);
 
   const safeName = escapeHtml(name);
 
   const { data, error } = await resend.emails.send({
-    from,
+    from: env.emailFrom,
     to,
     subject: "Verify your CryptoX email address",
     html: `

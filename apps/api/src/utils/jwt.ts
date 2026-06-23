@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import jwt, { type SignOptions } from "jsonwebtoken";
+import { env } from "../config/env.js";
 
 export type TokenClaims = {
   userId: string;
@@ -14,13 +15,7 @@ export type AppJwtPayload = TokenClaims & {
 };
 
 function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-
-  if (!secret) {
-    throw new Error("JWT_SECRET is missing in .env");
-  }
-
-  return secret;
+  return env.jwtSecret;
 }
 
 export function signToken(payload: TokenClaims): string {

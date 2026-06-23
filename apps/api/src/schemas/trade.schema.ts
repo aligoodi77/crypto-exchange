@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+export const idempotencyKeySchema = z
+  .string()
+  .trim()
+  .min(8, "Idempotency-Key must be at least 8 characters")
+  .max(128, "Idempotency-Key must be at most 128 characters")
+  .regex(
+    /^[A-Za-z0-9._:-]+$/,
+    "Idempotency-Key can only contain letters, numbers, dots, underscores, colons, and hyphens",
+  );
+
 const positiveDecimalInput = (fieldName: string) =>
   z.union([
     z.number().positive(`${fieldName} must be greater than 0`).finite(),

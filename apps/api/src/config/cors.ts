@@ -1,12 +1,6 @@
 import type { CorsOptions } from "cors";
+import { env } from "./env.js";
 import { AppError } from "../utils/app-error.js";
-
-const allowedOrigins = (
-  process.env.CORS_ORIGINS ?? "http://localhost:3000,http://127.0.0.1:3000"
-)
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
 
 export function isOriginAllowed(origin?: string) {
   // curl, Postman, React Native, server-to-server request
@@ -15,7 +9,7 @@ export function isOriginAllowed(origin?: string) {
     return true;
   }
 
-  return allowedOrigins.includes(origin);
+  return env.corsOrigins.includes(origin);
 }
 
 export const corsOptions: CorsOptions = {

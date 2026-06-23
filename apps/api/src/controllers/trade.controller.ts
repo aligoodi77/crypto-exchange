@@ -1,7 +1,22 @@
 import type { Response, NextFunction } from "express";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
-import { buyCoinSchema, sellCoinSchema } from "../schemas/trade.schema.js";
+import {
+  buyCoinSchema,
+  idempotencyKeySchema,
+  sellCoinSchema,
+} from "../schemas/trade.schema.js";
 import { buyCoin, sellCoin } from "../services/trade.service.js";
+import { AppError } from "../utils/app-error.js";
+
+function getIdempotencyKey(req: AuthenticatedRequest) {
+  const idempotencyKey = req.headers["idempotency-key"];
+
+  if (typeof idempotencyKey !== "string") {
+    throw new AppError("Idempotency-Key header is required", 400);
+  }
+
+  return idempotencyKeySchema.parse(idempotencyKey);
+}
 
 export async function buyCoinController(
   req: AuthenticatedRequest,
@@ -18,7 +33,8 @@ export async function buyCoinController(
     }
 
     const input = buyCoinSchema.parse(req.body);
-    const result = await buyCoin(req.user.userId, input);
+    const idempotencyKey = getIdempotencyKey(req);
+    const result = await buyCoin(req.user.userId, input, idempotencyKey);
 
     res.status(201).json({
       success: true,
@@ -44,7 +60,8 @@ export async function sellCoinController(
       return;
     }
     const input = sellCoinSchema.parse(req.body);
-    const result = await sellCoin(req.user.userId, input);
+    const idempotencyKey = getIdempotencyKey(req);
+    const result = await sellCoin(req.user.userId, input, idempotencyKey);
 
     res.status(200).json({
       success: true,

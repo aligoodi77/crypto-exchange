@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 
+import { env } from "./config/env.js";
 import { corsOptions } from "./config/cors.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { coinsRouter } from "./routes/coins.routes.js";
@@ -15,7 +16,7 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 export const app = express();
 
-if (process.env.NODE_ENV === "production") {
+if (env.nodeEnv === "production") {
   app.set("trust proxy", 1);
 }
 
