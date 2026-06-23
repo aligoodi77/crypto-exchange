@@ -13,6 +13,8 @@ import {
   verifyEmailQuerySchema,
 } from "../schemas/auth.schema.js";
 
+import { getMarketsQuerySchema } from "../schemas/market.schema.js";
+import { transactionsQuerySchema } from "../schemas/transaction.schema.js";
 import { buyCoinSchema, sellCoinSchema } from "../schemas/trade.schema.js";
 
 extendZodWithOpenApi(z);
@@ -139,6 +141,142 @@ const TradeResultSchema = registry.register(
     }),
     asset: WalletAssetSnapshotSchema.nullable(),
     transaction: TradeTransactionSchema,
+  }),
+);
+
+const PaginationSchema = registry.register(
+  "Pagination",
+  z.object({
+    page: z.number().int(),
+    limit: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    hasNextPage: z.boolean(),
+    hasPreviousPage: z.boolean(),
+  }),
+);
+
+const MarketPaginationSchema = registry.register(
+  "MarketPagination",
+  z.object({
+    page: z.number().int(),
+    limit: z.number().int(),
+    totalItems: z.number().int(),
+    totalPages: z.number().int(),
+    hasNextPage: z.boolean(),
+    hasPreviousPage: z.boolean(),
+  }),
+);
+
+const MarketCoinSchema = registry.register(
+  "MarketCoin",
+  z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    symbol: z.string(),
+    image: z.string().nullable(),
+    price: z.string(),
+    change24h: z.string(),
+    marketCap: z.string(),
+    volume24h: z.string(),
+    updatedAt: z.string().datetime(),
+  }),
+);
+
+const StoredCoinSchema = registry.register(
+  "StoredCoin",
+  z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    symbol: z.string(),
+    image: z.string().nullable(),
+    price: z.string(),
+    change24h: z.string(),
+    marketCap: z.string(),
+    volume24h: z.string(),
+    isActive: z.boolean(),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+  }),
+);
+
+const LiveCoinSchema = registry.register(
+  "LiveCoin",
+  z.object({
+    id: z.string(),
+    symbol: z.string(),
+    name: z.string(),
+    image: z.string().url(),
+    current_price: z.number(),
+    price_change_percentage_24h: z.number().nullable(),
+    market_cap: z.number().nullable(),
+    total_volume: z.number().nullable(),
+  }),
+);
+
+const WalletAssetSchema = registry.register(
+  "WalletAsset",
+  z.object({
+    id: z.string().uuid(),
+    amount: z.string(),
+    averageBuyPrice: z.string(),
+    currentPrice: z.string(),
+    currentValue: z.string(),
+    costBasis: z.string(),
+    profitLoss: z.string(),
+    profitLossPercent: z.string(),
+    coin: z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      symbol: z.string(),
+      image: z.string().nullable(),
+      change24h: z.string(),
+    }),
+  }),
+);
+
+const WalletDetailsSchema = registry.register(
+  "WalletDetails",
+  z.object({
+    id: z.string().uuid(),
+    balanceUsd: z.string(),
+    assets: z.array(WalletAssetSchema),
+    summary: z.object({
+      cashBalanceUsd: z.string(),
+      totalAssetValue: z.string(),
+      totalCostBasis: z.string(),
+      totalProfitLoss: z.string(),
+      totalProfitLossPercent: z.string(),
+      totalPortfolioValue: z.string(),
+      assetCount: z.number().int(),
+    }),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+  }),
+);
+
+const TransactionItemSchema = registry.register(
+  "TransactionItem",
+  z.object({
+    id: z.string().uuid(),
+    type: z.enum(["DEPOSIT", "WITHDRAW", "BUY", "SELL"]),
+    amount: z.string(),
+    price: z.string(),
+    grossTotal: z.string(),
+    fee: z.string(),
+    chargedUsd: z.string().nullable(),
+    receivedUsd: z.string().nullable(),
+    status: z.enum(["PENDING", "SUCCESS", "FAILED"]),
+    createdAt: z.string().datetime(),
+    coin: z
+      .object({
+        id: z.string().uuid(),
+        name: z.string(),
+        symbol: z.string(),
+        image: z.string().nullable(),
+        currentPrice: z.string(),
+      })
+      .nullable(),
   }),
 );
 
@@ -633,6 +771,235 @@ registry.registerPath({
     },
     429: {
       description: "Trade rate limit reached",
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+registry.registerComponent("securitySchemes", "syncSecret", {
+  type: "apiKey",
+  in: "header",
+  name: "x-sync-secret",
+  description:
+    "Internal sync secret. Use only in local or protected server-to-server environments.",
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/markets",
+  tags: ["Markets"],
+  summary: "List active market coins",
+  description:
+    "Returns active coins from the local database with pagination, search, and sorting.",
+  request: {
+    query: getMarketsQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Market list returned successfully",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(MarketCoinSchema),
+            pagination: MarketPaginationSchema,
+          }),
+        },
+      },
+    },
+    400: {
+      description: "Invalid query parameters",
+      content: {
+        "application/json": {
+          schema: ValidationErrorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/coins",
+  tags: ["Coins"],
+  summary: "Get locally stored active coins",
+  description:
+    "Returns active coins currently saved in the database, ordered by market cap.",
+  responses: {
+    200: {
+      description: "Stored coins returned successfully",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(StoredCoinSchema),
+          }),
+        },
+      },
+    },
+    500: {
+      description: "Database error",
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/coins/live",
+  tags: ["Coins"],
+  summary: "Get live CoinGecko market data",
+  description:
+    "Gets live market data from CoinGecko. The server uses a timeout, retry strategy, and short-lived cache.",
+  responses: {
+    200: {
+      description: "Live market data returned successfully",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(LiveCoinSchema),
+          }),
+        },
+      },
+    },
+    500: {
+      description: "External market provider failed",
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/coins/sync",
+  tags: ["Coins"],
+  summary: "Sync market data into the local database",
+  description:
+    "Protected server-to-server endpoint. Fetches live market prices and upserts them into the local database.",
+  security: [{ syncSecret: [] }],
+  responses: {
+    200: {
+      description: "Coins synced successfully",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            message: z.literal("Coins synced successfully"),
+            data: z.object({
+              count: z.number().int(),
+              syncedAt: z.string().datetime(),
+            }),
+          }),
+        },
+      },
+    },
+    401: {
+      description: "Missing or invalid x-sync-secret",
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+    500: {
+      description: "Coin sync failed",
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/wallet/me",
+  tags: ["Wallet"],
+  summary: "Get current user's wallet",
+  description:
+    "Returns cash balance, owned assets, portfolio valuation, cost basis, and profit/loss summary.",
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: {
+      description: "Wallet returned successfully",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: WalletDetailsSchema,
+          }),
+        },
+      },
+    },
+    401: {
+      description: "Unauthorized",
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: "Wallet not found",
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/transactions",
+  tags: ["Transactions"],
+  summary: "List current user's transactions",
+  description:
+    "Returns the authenticated user's transaction history with optional type filter and pagination.",
+  security: [{ bearerAuth: [] }],
+  request: {
+    query: transactionsQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Transactions returned successfully",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              items: z.array(TransactionItemSchema),
+              pagination: PaginationSchema,
+            }),
+          }),
+        },
+      },
+    },
+    400: {
+      description: "Invalid query parameters",
+      content: {
+        "application/json": {
+          schema: ValidationErrorResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Unauthorized",
       content: {
         "application/json": {
           schema: ErrorResponseSchema,
