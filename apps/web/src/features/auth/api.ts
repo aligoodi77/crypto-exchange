@@ -3,6 +3,7 @@ import type { ApiSuccessResponse } from "@/lib/api-types";
 
 import type {
   AuthSession,
+  AuthUser,
   LoginInput,
   RegisterInput,
   RegisterResult,
@@ -24,6 +25,17 @@ export async function registerUser(
     ApiSuccessResponse<RegisterResult>,
     RegisterInput
   >("/api/auth/register", input);
+
+  return response.data;
+}
+
+export async function getCurrentUser(token: string): Promise<AuthUser> {
+  const response = await apiClient.get<ApiSuccessResponse<AuthUser>>(
+    "/api/auth/me",
+    {
+      token,
+    },
+  );
 
   return response.data;
 }

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+
 import "./globals.css";
-import { QueryProvider } from "@/components/layout/QueryProvider";
+
 import { AuthSessionHydrator } from "@/components/layout/AuthSessionHydrator";
+import { QueryProvider } from "@/components/layout/QueryProvider";
 
 export const metadata: Metadata = {
   title: "CoinBarrier Exchange",
@@ -10,7 +12,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
       <body>
