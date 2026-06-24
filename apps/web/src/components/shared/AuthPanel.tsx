@@ -1,78 +1,319 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Eye, Lock, Mail, Tag, User } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/shared/Logo";
-import { loginSchema, registerSchema } from "@/features/auth/schema";
+
+import { isApiError } from "@/lib/api-error";
+
+import { useLogin, useRegister } from "@/features/auth/hooks";
+
+import {
+  loginSchema,
+  registerSchema,
+  type LoginFormValues,
+  type RegisterFormValues,
+} from "@/features/auth/schema";
+
+import { useAuthStore } from "@/store/auth-store";
 
 type AuthMode = "login" | "register";
 
 export function AuthPanel({ mode }: { mode: AuthMode }) {
-  const isLogin = mode === "login";
-  const schema = isLogin ? loginSchema : registerSchema;
-  const { register } = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) });
+  if (mode === "login") {
+    return <LoginForm />;
+  }
+
+  return <RegisterForm />;
+}
+
+function LoginForm() {
+  const router = useRouter();
+  const setSession = useAuthStore((state) => state.setSession);
+
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const loginMutation = useLogin();
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  async function onSubmit(values: LoginFormValues) {
+    setApiError(null);
+
+    try {
+      const session = await loginMutation.mutateAsync(values);
+
+      setSession(session.token, session.user);
+
+      router.replace("/dashboard");
+    } catch (error) {
+      if (isApiError(error)) {
+        for (const fieldError of error.errors) {
+          if (fieldError.path === "email" || fieldError.path === "password") {
+            setError(fieldError.path, {
+              type: "server",
+              message: fieldError.message,
+            });
+          }
+        }
+
+        setApiError(error.message);
+        return;
+      }
+
+      setApiError(
+        "Something went wrong. Please check your connection and try again.",
+      );
+    }
+  }
 
   return (
-    <main className="coin-surface grid min-h-screen place-items-center p-4">
-      <div className="w-full max-w-6xl">
-        <div className="mb-7 flex items-center justify-between">
+    <AuthCard
+      title="Welcome back"
+      description="Sign in to manage your crypto portfolio."
+    >
+      <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+        <FormField label="Email address" error={errors.email?.message}>
+          <Input
+            type="email"
+            autoComplete="email"
+            placeholder="Enter your email"
+            {...register("email")}
+          />
+        </FormField>
+
+        <FormField label="Password" error={errors.password?.message}>
+          <Input
+            type="password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            {...register("password")}
+          />
+        </FormField>
+
+        {apiError ? (
+          <p className="text-sm text-destructive">{apiError}</p>
+        ) : null}
+
+        <Button
+          className="w-full"
+          type="submit"
+          disabled={loginMutation.isPending}
+        >
+          {loginMutation.isPending ? "Signing in..." : "Sign In"}
+        </Button>
+
+        <p className="text-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link
+            className="font-medium text-primary hover:underline"
+            href="/register"
+          >
+            Create account
+          </Link>
+        </p>
+      </form>
+    </AuthCard>
+  );
+}
+
+function RegisterForm() {
+  const router = useRouter();
+  const setSession = useAuthStore((state) => state.setSession);
+
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const registerMutation = useRegister();
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  async function onSubmit(values: RegisterFormValues) {
+    setApiError(null);
+
+    try {
+      const result = await registerMutation.mutateAsync({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+      });
+
+      setSession(result.token, result.user);
+
+      router.replace("/dashboard");
+    } catch (error) {
+      if (isApiError(error)) {
+        for (const fieldError of error.errors) {
+          if (
+            fieldError.path === "name" ||
+            fieldError.path === "email" ||
+            fieldError.path === "password"
+          ) {
+            setError(fieldError.path, {
+              type: "server",
+              message: fieldError.message,
+            });
+          }
+        }
+
+        setApiError(error.message);
+        return;
+      }
+
+      setApiError(
+        "Something went wrong. Please check your connection and try again.",
+      );
+    }
+  }
+
+  return (
+    <AuthCard
+      title="Create your account"
+      description="Start building your crypto portfolio today."
+    >
+      <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+        <FormField label="Full name" error={errors.name?.message}>
+          <Input
+            type="text"
+            autoComplete="name"
+            placeholder="Enter your full name"
+            {...register("name")}
+          />
+        </FormField>
+
+        <FormField label="Email address" error={errors.email?.message}>
+          <Input
+            type="email"
+            autoComplete="email"
+            placeholder="Enter your email"
+            {...register("email")}
+          />
+        </FormField>
+
+        <FormField label="Password" error={errors.password?.message}>
+          <Input
+            type="password"
+            autoComplete="new-password"
+            placeholder="Create a password"
+            {...register("password")}
+          />
+        </FormField>
+
+        <FormField
+          label="Confirm password"
+          error={errors.confirmPassword?.message}
+        >
+          <Input
+            type="password"
+            autoComplete="new-password"
+            placeholder="Confirm your password"
+            {...register("confirmPassword")}
+          />
+        </FormField>
+
+        {apiError ? (
+          <p className="text-sm text-destructive">{apiError}</p>
+        ) : null}
+
+        <Button
+          className="w-full"
+          type="submit"
+          disabled={registerMutation.isPending}
+        >
+          {registerMutation.isPending
+            ? "Creating account..."
+            : "Create Account"}
+        </Button>
+
+        <p className="text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link
+            className="font-medium text-primary hover:underline"
+            href="/login"
+          >
+            Sign in
+          </Link>
+        </p>
+      </form>
+    </AuthCard>
+  );
+}
+
+function AuthCard({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <main className="flex min-h-screen items-center justify-center px-4 py-10">
+      <Card className="w-full max-w-md p-6 sm:p-8">
+        <div className="mb-8 space-y-3">
           <Logo />
-          <Link className="text-sm text-violet-300" href={isLogin ? "/register" : "/login"}>{isLogin ? "Create account" : "Sign in"}</Link>
+
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+
+          <p className="text-sm text-muted-foreground">{description}</p>
         </div>
-        <Card className="grid overflow-hidden md:grid-cols-[.85fr_1.15fr]">
-          <form className="p-7 md:p-12">
-            <h1 className="text-4xl font-bold">{isLogin ? "Welcome back" : "Create your account"}</h1>
-            <p className="mt-3 max-w-sm text-zinc-400">{isLogin ? "Sign in to your account and manage your crypto portfolio with confidence." : "Join CoinBarrier and start your crypto journey today."}</p>
-            <div className="mt-8 space-y-5">
-              {!isLogin && <Field icon={<User />} label="Full Name" placeholder="Enter your full name" bind={register("fullName" as never)} />}
-              <Field icon={<Mail />} label="Email address" placeholder="Enter your email" bind={register("email" as never)} />
-              <Field icon={<Lock />} label="Password" placeholder={isLogin ? "Enter your password" : "Create a strong password"} type="password" bind={register("password" as never)} trailing={<Eye className="size-4" />} />
-              {!isLogin && <Field icon={<Lock />} label="Confirm Password" placeholder="Confirm your password" type="password" bind={register("confirmPassword" as never)} trailing={<Eye className="size-4" />} />}
-              {!isLogin && <Field icon={<Tag />} label="Referral Code (Optional)" placeholder="Enter referral code" bind={register("referralCode" as never)} />}
-            </div>
-            <div className="mt-6 flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 text-zinc-300"><input type="checkbox" className="size-4 accent-violet-500" /> {isLogin ? "Remember me" : "I agree to the Terms and Privacy Policy"}</label>
-              {isLogin && <Link className="text-violet-300" href="#">Forgot password?</Link>}
-            </div>
-            <Button className="mt-7 w-full">{isLogin ? "Sign In" : "Create Account"} {!isLogin && <ArrowRight className="size-4" />}</Button>
-            <div className="my-6 flex items-center gap-3 text-xs text-zinc-500 before:h-px before:flex-1 before:bg-white/10 after:h-px after:flex-1 after:bg-white/10">or continue with</div>
-            <Button type="button" variant="outline" className="w-full">Continue with Google</Button>
-            <p className="mt-7 text-center text-sm text-zinc-400">
-              {isLogin ? "Don't have an account?" : "Already have an account?"} <Link className="text-violet-300" href={isLogin ? "/register" : "/login"}>{isLogin ? "Create account" : "Sign in"}</Link>
-            </p>
-          </form>
-          <section className="relative hidden min-h-[640px] overflow-hidden border-l border-white/10 p-12 md:block">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(139,92,246,.38),transparent_19rem)]" />
-            <div className="relative grid h-full place-items-center">
-              <div className="relative grid size-72 place-items-center rounded-full border border-violet-400/30 bg-violet-500/10 shadow-[0_0_80px_rgba(139,92,246,.45)]">
-                <div className="grid size-44 place-items-center rounded-full bg-gradient-to-br from-violet-400 to-violet-900 text-7xl font-black shadow-[0_0_80px_rgba(139,92,246,.75)]">cb</div>
-              </div>
-            </div>
-            <div className="absolute bottom-10 left-10 right-10 grid grid-cols-3 gap-5 text-sm text-zinc-300">
-              {["Bank-grade security", "Real-time portfolio", "Trusted by thousands"].map((item) => <div key={item} className="rounded-xl bg-white/5 p-4">{item}</div>)}
-            </div>
-          </section>
-        </Card>
-      </div>
+
+        {children}
+      </Card>
     </main>
   );
 }
 
-function Field({ icon, label, trailing, bind, ...props }: { icon: React.ReactNode; label: string; trailing?: React.ReactNode; bind: object } & React.ComponentProps<typeof Input>) {
+function FormField({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <label className="block text-sm text-zinc-300">
-      {label}
-      <span className="relative mt-2 block">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 [&>svg]:size-4">{icon}</span>
-        <Input className="pl-11 pr-10" {...props} {...bind} />
-        {trailing && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500">{trailing}</span>}
-      </span>
+    <label className="block space-y-2">
+      <span className="text-sm font-medium">{label}</span>
+
+      {children}
+
+      {error ? (
+        <span className="block text-sm text-destructive">{error}</span>
+      ) : null}
     </label>
   );
 }
