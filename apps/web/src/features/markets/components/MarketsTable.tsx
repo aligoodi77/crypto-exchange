@@ -105,8 +105,8 @@ export function MarketsTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] text-left">
-          <thead className="border-b border-white/10 bg-white/[0.02]">
+        <table className="w-full min-w-190 text-left">
+          <thead className="border-b border-white/10 bg-white/2">
             <tr>
               <th className="w-14 px-5 py-3 text-xs font-medium text-muted-foreground">
                 #
@@ -152,7 +152,7 @@ export function MarketsTable({
 
                 return (
                   <tr
-                    className="border-b border-white/5 transition hover:bg-white/[0.03]"
+                    className="border-b border-white/5 transition hover:bg-white/3"
                     key={coin.id}
                   >
                     <td className="px-5 py-4 text-sm text-muted-foreground">

@@ -137,7 +137,7 @@ export function MarketsClient() {
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 
             <input
-              className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] pl-10 pr-10 text-sm text-white outline-none transition placeholder:text-muted-foreground focus:border-violet-400"
+              className="h-11 w-full rounded-xl border border-white/10 bg-white/4 pl-10 pr-10 text-sm text-white outline-none transition placeholder:text-muted-foreground focus:border-violet-400"
               onChange={(event) => handleSearchChange(event.target.value)}
               placeholder="Search Bitcoin, ETH, Solana..."
               value={search}
@@ -157,7 +157,7 @@ export function MarketsClient() {
 
           <div className="flex gap-3">
             <select
-              className="h-11 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-violet-400"
+              className="h-11 rounded-xl border border-white/10 bg-white/4 px-3 text-sm text-white outline-none focus:border-violet-400"
               onChange={(event) => {
                 setSortBy(event.target.value as MarketSortBy);
                 setPage(1);

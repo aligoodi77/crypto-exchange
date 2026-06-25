@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-
-import { getMyWallet } from "@/features/wallet/api";
+import { getMyWallet } from "./api";
 
 export const walletKeys = {
   all: ["wallet"] as const,
