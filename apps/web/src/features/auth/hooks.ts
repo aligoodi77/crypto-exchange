@@ -12,6 +12,7 @@ import {
   updateProfile,
   verifyEmailCode,
 } from "@/features/auth/api";
+import type { UpdateProfileInput } from "@/features/auth/types";
 
 export const authKeys = {
   all: ["auth"] as const,
@@ -49,7 +50,7 @@ export function useCurrentUser(token: string | null) {
 
 export function useUpdateProfile(token: string | null) {
   return useMutation({
-    mutationFn: (input: { name: string }) => updateProfile(token!, input),
+    mutationFn: (input: UpdateProfileInput) => updateProfile(token!, input),
   });
 }
 

@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MoreHorizontal, Plus, WalletCards } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,32 +53,10 @@ export function DashboardClient() {
 
   return (
     <AppShell
-      subtitle="A real-time overview of your simulated crypto portfolio."
-      title="Dashboard"
+      subtitle="We're here to ensure your digital assets are protected and your experience is exceptional."
+      title={`Welcome to CoinBarrier${user?.name ? `, ${user.name.split(" ")[0]}` : ""}!`}
     >
       <div className="space-y-6">
-        <section className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/3 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">Welcome back</p>
-
-            <h2 className="mt-1 text-2xl font-semibold text-white">
-              {user?.name ?? "Trader"}
-            </h2>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <Link href="/trade/btc">Buy BTC</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/markets">Explore Markets</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/wallet">View Wallet</Link>
-            </Button>
-          </div>
-        </section>
-
         {walletQuery.isPending ? (
           <DashboardSkeleton />
         ) : walletQuery.isError ? (
@@ -99,39 +77,255 @@ export function DashboardClient() {
               email={user?.email ?? ""}
             />
 
-            <PortfolioSummaryCards summary={wallet.summary} />
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+              <div className="space-y-6">
+                <ResourceSection assets={wallet.assets} />
 
-            {wallet.assets.length > 0 ? (
-              <>
-                <PortfolioInsights wallet={wallet} />
+                {wallet.assets.length > 0 ? (
+                  <InvestmentTable assets={wallet.assets} />
+                ) : (
+                  <EmptyDashboardState />
+                )}
 
-                <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+                <PortfolioSummaryCards summary={wallet.summary} />
+
+                <section className="grid gap-6 lg:grid-cols-2">
                   <PortfolioPerformanceChart wallet={wallet} />
-
-                  <PortfolioAllocation
-                    assets={wallet.assets}
-                    summary={wallet.summary}
+                  <RecentTransactions
+                    isError={recentTransactionsQuery.isError}
+                    isLoading={recentTransactionsQuery.isPending}
+                    onRetry={() => {
+                      void recentTransactionsQuery.refetch();
+                    }}
+                    transactions={recentTransactionsQuery.data?.items ?? []}
                   />
                 </section>
-              </>
-            ) : (
-              <EmptyDashboardState />
-            )}
+              </div>
 
-            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
-              <RecentTransactions
-                isError={recentTransactionsQuery.isError}
-                isLoading={recentTransactionsQuery.isPending}
-                onRetry={() => {
-                  void recentTransactionsQuery.refetch();
-                }}
-                transactions={recentTransactionsQuery.data?.items ?? []}
-              />
+              <div className="space-y-6">
+                <LiquidStakingPanel />
+                <DashboardWalletPanel wallet={wallet} />
+                <PortfolioAllocation
+                  assets={wallet.assets}
+                  summary={wallet.summary}
+                />
+                <NewListingsPanel />
+              </div>
             </section>
           </>
         ) : null}
       </div>
     </AppShell>
+  );
+}
+
+function ResourceSection({ assets }: { assets: WalletAsset[] }) {
+  const featured = assets.slice(0, 3);
+  const fallback: WalletAsset[] = assets.length ? featured : [];
+
+  return (
+    <section>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm text-violet-300">Suggested currencies for the next 24 hours</p>
+          <h2 className="mt-2 text-lg font-semibold text-white">Principal Resources</h2>
+        </div>
+        <div className="flex gap-2">
+          <span className="rounded-xl border border-white/10 bg-white/[.055] px-4 py-2 text-sm text-white">24h</span>
+          <span className="rounded-xl border border-white/10 bg-white/[.055] px-4 py-2 text-sm text-white">Desc</span>
+        </div>
+      </div>
+
+      {fallback.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          {fallback.map((asset) => (
+            <ResourceCard asset={asset} key={asset.id} />
+          ))}
+        </div>
+      ) : (
+        <Card className="p-6">
+          <p className="text-sm text-zinc-400">Buy your first asset to populate recommendations.</p>
+        </Card>
+      )}
+    </section>
+  );
+}
+
+function ResourceCard({ asset }: { asset: WalletAsset }) {
+  const positive = isPositive(asset.coin.change24h);
+
+  return (
+    <Card className="overflow-hidden p-5">
+      <div className="flex items-center gap-3">
+        {asset.coin.image ? (
+          <img alt="" className="size-11 rounded-full bg-white/10" src={asset.coin.image} />
+        ) : (
+          <span className="grid size-11 place-items-center rounded-full bg-violet-500/20 font-semibold text-violet-100">
+            {asset.coin.symbol.slice(0, 1)}
+          </span>
+        )}
+        <div>
+          <h3 className="font-semibold text-white">{asset.coin.name}</h3>
+          <p className="text-xs text-zinc-500">{asset.coin.symbol}</p>
+        </div>
+      </div>
+      <p className="mt-6 text-xs text-zinc-500">Reward Rate</p>
+      <div className="mt-1 flex items-end gap-2">
+        <span className="text-2xl font-bold text-white">
+          {Math.max(1.2, Math.abs(Number(asset.profitLossPercent)) + 4).toFixed(2)}%
+        </span>
+        <span className={positive ? "text-xs text-emerald-400" : "text-xs text-red-400"}>
+          {formatPercent(asset.coin.change24h)}
+        </span>
+      </div>
+      <MiniSparkline positive={positive} />
+    </Card>
+  );
+}
+
+function InvestmentTable({ assets }: { assets: WalletAsset[] }) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex items-baseline gap-2">
+          <h2 className="font-semibold text-white">Investment Crypto</h2>
+          <span className="text-xs text-violet-200">Last Update 45 minutes ago</span>
+        </div>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/markets">View All</Link>
+        </Button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-170 text-left">
+          <tbody>
+            {assets.slice(0, 5).map((asset, index) => {
+              const positive = isPositive(asset.profitLossPercent);
+              return (
+                <tr className="border-b border-white/5" key={asset.id}>
+                  <td className="px-5 py-4 text-sm text-zinc-400">{index + 1}</td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      {asset.coin.image ? <img alt="" className="size-10 rounded-full" src={asset.coin.image} /> : null}
+                      <div>
+                        <p className="font-medium text-white">{asset.coin.name}</p>
+                        <p className="text-xs text-zinc-500">{asset.coin.symbol} | {formatPercent(asset.profitLossPercent)} APY</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 text-sm text-white">{formatUsd(asset.currentPrice)}</td>
+                  <td className="px-5 py-4"><MiniSparkline positive={positive} compact /></td>
+                  <td className={positive ? "px-5 py-4 text-sm text-emerald-400" : "px-5 py-4 text-sm text-red-400"}>
+                    {formatPercent(asset.profitLossPercent)}
+                  </td>
+                  <td className="px-5 py-4 text-sm font-medium text-white">{formatUsd(asset.currentValue)}</td>
+                  <td className="px-5 py-4 text-right">
+                    <MoreHorizontal className="ml-auto size-5 text-zinc-500" />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+function LiquidStakingPanel() {
+  return (
+    <Card className="p-5">
+      <h2 className="text-lg font-semibold text-white">Liquid Staking Portfolio</h2>
+      <p className="mt-3 text-sm leading-6 text-zinc-400">
+        An all-in-one tool called Liquid Staking Portfolio lets you optimize and manage your liquid staking investments.
+      </p>
+      <div className="mt-5 grid gap-3">
+        <Button asChild>
+          <Link href="/wallet">
+            Connect Wallet
+            <WalletCards className="size-4" />
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/wallet">Connect Wallet</Link>
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function DashboardWalletPanel({ wallet }: { wallet: Wallet }) {
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold text-white">Wallet</h2>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/wallet">
+            New Wallet
+            <Plus className="size-4" />
+          </Link>
+        </Button>
+      </div>
+      <p className="mt-8 text-xs text-zinc-500">My Balance</p>
+      <p className="mt-1 text-3xl font-bold text-white">{formatUsd(wallet.summary.totalPortfolioValue)}</p>
+      <div className="mt-6 space-y-3">
+        {wallet.assets.slice(0, 4).map((asset) => (
+          <div className="flex items-center justify-between gap-3" key={asset.id}>
+            <div className="flex items-center gap-2">
+              {asset.coin.image ? <img alt="" className="size-7 rounded-full" src={asset.coin.image} /> : null}
+              <span className="text-sm text-white">{asset.coin.symbol}</span>
+            </div>
+            <span className={isPositive(asset.profitLossPercent) ? "text-sm text-emerald-400" : "text-sm text-red-400"}>
+              {formatPercent(asset.profitLossPercent)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function NewListingsPanel() {
+  const listings = [
+    ["BB", "BounceBit", "$0.022322", "+5.80%"],
+    ["REZ", "Renzo", "$0.0229128", "+9.99%"],
+    ["XRP", "Ripple", "$0.1719259", "-2.20%"],
+  ];
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-white">New Listing</h2>
+        <Button asChild size="sm" variant="outline"><Link href="/markets">See All</Link></Button>
+      </div>
+      <div className="mt-5 space-y-4">
+        {listings.map(([symbol, name, price, change]) => (
+          <div className="flex items-center justify-between gap-3" key={symbol}>
+            <div>
+              <p className="font-medium text-white">{symbol}</p>
+              <p className="text-xs text-zinc-500">{name}</p>
+            </div>
+            <p className="text-sm text-white">{price}</p>
+            <p className={change.startsWith("+") ? "text-sm text-emerald-400" : "text-sm text-red-400"}>{change}</p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function MiniSparkline({ positive, compact = false }: { positive: boolean; compact?: boolean }) {
+  return (
+    <div className={compact ? "h-8 w-28" : "mt-4 h-16 w-full"}>
+      <svg className="h-full w-full" viewBox="0 0 120 44" role="img" aria-label="Sparkline">
+        <path
+          d={positive ? "M2 31 C15 12 23 35 36 24 S59 8 72 17 91 30 118 6" : "M2 10 C18 25 28 13 39 20 S62 33 76 23 101 19 118 40"}
+          fill="none"
+          stroke={positive ? "#8b5cf6" : "#ef4444"}
+          strokeLinecap="round"
+          strokeWidth="3"
+        />
+      </svg>
+    </div>
   );
 }
 
