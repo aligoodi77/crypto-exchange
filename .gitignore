@@ -19,6 +19,8 @@ build
 out
 coverage
 **/coverage
+*.tsbuildinfo
+**/*.tsbuildinfo
 
 # logs
 npm-debug.log*

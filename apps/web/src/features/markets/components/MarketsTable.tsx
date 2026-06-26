@@ -15,8 +15,10 @@ import { Card } from "@/components/ui/card";
 import {
   formatCompactUsd,
   formatPercent,
+  formatRelativeTime,
   formatUsd,
   isPositive,
+  isStaleMarketPrice,
 } from "@/features/markets/formatters";
 
 import type {
@@ -83,6 +85,19 @@ export function MarketsTable({
   onPreviousPage,
   onNextPage,
 }: MarketsTableProps) {
+  const newestUpdateMs = Math.max(
+    0,
+    ...coins
+      .map((coin) => new Date(coin.updatedAt).getTime())
+      .filter(Number.isFinite),
+  );
+  const newestUpdateIso = newestUpdateMs
+    ? new Date(newestUpdateMs).toISOString()
+    : null;
+  const marketDataIsStale = newestUpdateIso
+    ? isStaleMarketPrice(newestUpdateIso)
+    : false;
+
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
@@ -93,6 +108,20 @@ export function MarketsTable({
             {pagination
               ? `${pagination.totalItems.toLocaleString()} assets available`
               : "Loading available assets..."}
+          </p>
+
+          <p
+            className={
+              marketDataIsStale
+                ? "mt-1 text-xs text-amber-300"
+                : "mt-1 text-xs text-zinc-500"
+            }
+          >
+            Market prices are delayed and simulated
+            {newestUpdateIso
+              ? ` · updated ${formatRelativeTime(newestUpdateIso)}`
+              : ""}
+            {marketDataIsStale ? " · stale" : ""}
           </p>
         </div>
 
@@ -131,6 +160,10 @@ export function MarketsTable({
                   </button>
                 </th>
               ))}
+
+              <th className="px-5 py-3 text-right text-xs font-medium text-muted-foreground">
+                Updated
+              </th>
 
               <th className="px-5 py-3 text-right text-xs font-medium text-muted-foreground">
                 Action
@@ -193,6 +226,16 @@ export function MarketsTable({
                       {formatCompactUsd(coin.volume24h)}
                     </td>
 
+                    <td
+                      className={
+                        isStaleMarketPrice(coin.updatedAt)
+                          ? "px-5 py-4 text-right text-sm text-amber-300"
+                          : "px-5 py-4 text-right text-sm text-zinc-400"
+                      }
+                    >
+                      {formatRelativeTime(coin.updatedAt)}
+                    </td>
+
                     <td className="px-5 py-4 text-right">
                       <Button asChild size="sm" variant="outline">
                         <Link
@@ -211,7 +254,7 @@ export function MarketsTable({
               <tr>
                 <td
                   className="px-5 py-14 text-center text-sm text-muted-foreground"
-                  colSpan={7}
+                  colSpan={8}
                 >
                   No assets matched your search.
                 </td>
@@ -297,7 +340,7 @@ function MarketAvatar({ coin }: { coin: MarketCoin }) {
 function MarketsTableSkeleton() {
   return Array.from({ length: 10 }).map((_, index) => (
     <tr className="border-b border-white/5" key={index}>
-      {Array.from({ length: 7 }).map((__, cellIndex) => (
+      {Array.from({ length: 8 }).map((__, cellIndex) => (
         <td className="px-5 py-5" key={cellIndex}>
           <div className="h-4 animate-pulse rounded bg-white/10" />
         </td>

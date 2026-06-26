@@ -241,7 +241,7 @@ export default function ProfilePage() {
                   value={email}
                 />
                 <span className="mt-2 block text-xs text-zinc-500">
-                  Email updates are not supported by the backend yet.
+                  To change your email, contact support.
                 </span>
               </label>
 

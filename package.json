@@ -4,19 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "api:dev": "npm --prefix apps/api run dev",
+    "api:build": "npm --prefix apps/api run build",
+    "api:typecheck": "npm --prefix apps/api run typecheck",
     "web:dev": "npm --prefix apps/web run dev",
     "web:build": "npm --prefix apps/web run build",
-    "api:test": "npm --prefix apps/api test"
+    "web:typecheck": "npm --prefix apps/web run typecheck",
+    "api:test": "npm --prefix apps/api test",
+    "typecheck": "npm run api:typecheck && npm run web:typecheck",
+    "test": "npm run api:test",
+    "test:all": "npm run typecheck && npm run api:test",
+    "build": "npm run api:build && npm run web:build"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@asteasolutions/zod-to-openapi": "^8.5.0",
-    "socket.io-client": "^4.8.3",
-    "swagger-ui-express": "^5.0.1"
-  },
-  "devDependencies": {
-    "@types/swagger-ui-express": "^4.1.8"
-  }
+  "license": "ISC"
 }

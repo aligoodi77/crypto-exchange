@@ -17,8 +17,10 @@ import { isApiError } from "@/lib/api-error";
 import {
   formatCompactUsd,
   formatPercent,
+  formatRelativeTime,
   formatUsd,
   isPositive,
+  isStaleMarketPrice,
 } from "@/features/markets/formatters";
 import { useMarkets } from "@/features/markets/hooks";
 import type { MarketCoin } from "@/features/markets/types";
@@ -127,6 +129,7 @@ export default function TradePage() {
 
 function TradeHeader({ coin }: { coin: MarketCoin }) {
   const positive = isPositive(coin.change24h);
+  const stalePrice = isStaleMarketPrice(coin.updatedAt);
   const hydrateWatchlist = useWatchlistStore((state) => state.hydrate);
   const isHydrated = useWatchlistStore((state) => state.isHydrated);
   const isWatched = useWatchlistStore((state) => state.isWatched(coin.symbol));
@@ -178,7 +181,11 @@ function TradeHeader({ coin }: { coin: MarketCoin }) {
       </div>
 
       <div className="text-sm text-zinc-400">
-        Updated {new Date(coin.updatedAt).toLocaleTimeString()}
+        Updated {formatRelativeTime(coin.updatedAt)}
+        {stalePrice ? " · stale" : ""}
+        <small className="block text-xs text-zinc-500">
+          Delayed simulated price
+        </small>
       </div>
 
       <button
