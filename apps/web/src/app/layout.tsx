@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { AuthSessionHydrator } from "@/components/layout/AuthSessionHydrator";
 import { QueryProvider } from "@/components/layout/QueryProvider";
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
   title: "CoinBarrier Exchange",
@@ -21,6 +22,7 @@ export default function RootLayout({
         <QueryProvider>
           <AuthSessionHydrator />
           {children}
+          <Toaster />
         </QueryProvider>
       </body>
     </html>

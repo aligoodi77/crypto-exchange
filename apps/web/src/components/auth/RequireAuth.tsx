@@ -71,8 +71,8 @@ export function RequireAuth({ children, requiredRole }: RequireAuthProps) {
   const currentUser = currentUserQuery.data;
 
   const hasWrongRole =
-    Boolean(requiredRole) &&
-    Boolean(currentUser) &&
+    requiredRole !== undefined &&
+    currentUser !== undefined &&
     currentUser.role !== requiredRole;
 
   useEffect(() => {

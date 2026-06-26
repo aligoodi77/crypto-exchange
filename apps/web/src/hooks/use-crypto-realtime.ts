@@ -7,9 +7,11 @@ import {
   connectRealtime,
   disconnectRealtime,
 } from "@/lib/realtime/socket.client";
+import { useToastStore } from "@/store/toast-store";
 
 export function useCryptoRealtime(token?: string) {
   const queryClient = useQueryClient();
+  const showToast = useToastStore((state) => state.showToast);
 
   useEffect(() => {
     if (!token) {
@@ -42,6 +44,27 @@ export function useCryptoRealtime(token?: string) {
       queryClient.invalidateQueries({
         queryKey: ["transactions"],
       });
+
+      showToast({
+        title: "Trade completed",
+        description: "Wallet and transaction history were refreshed.",
+        tone: "success",
+      });
+    }
+
+    function handleAdminMarketSyncCompleted() {
+      queryClient.invalidateQueries({
+        queryKey: ["markets"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["admin"],
+      });
+
+      showToast({
+        title: "Market sync completed",
+        tone: "info",
+      });
     }
 
     socket.on("connect", () => {
@@ -58,6 +81,8 @@ export function useCryptoRealtime(token?: string) {
 
     socket.on("trade:completed", handleTradeCompleted);
 
+    socket.on("admin:market-sync-completed", handleAdminMarketSyncCompleted);
+
     return () => {
       socket.off("market:prices-updated", handleMarketPricesUpdated);
 
@@ -65,7 +90,9 @@ export function useCryptoRealtime(token?: string) {
 
       socket.off("trade:completed", handleTradeCompleted);
 
+      socket.off("admin:market-sync-completed", handleAdminMarketSyncCompleted);
+
       disconnectRealtime();
     };
-  }, [token, queryClient]);
+  }, [token, queryClient, showToast]);
 }

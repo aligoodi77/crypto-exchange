@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { Area, Bar, CartesianGrid, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card } from "@/components/ui/card";
-import { chartData } from "@/lib/mock-data";
+
+const chartData = [
+  { name: "06:00", value: 68200, volume: 28 },
+  { name: "07:30", value: 68480, volume: 42 },
+  { name: "09:00", value: 68620, volume: 35 },
+  { name: "10:30", value: 69080, volume: 64 },
+  { name: "12:00", value: 68690, volume: 31 },
+  { name: "13:30", value: 68742, volume: 45 },
+];
 
 export function TradingChart() {
   const [mounted, setMounted] = useState(false);

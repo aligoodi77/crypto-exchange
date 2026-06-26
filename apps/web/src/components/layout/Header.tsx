@@ -1,7 +1,15 @@
+"use client";
+
 import { Bell, ChevronDown, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useAuthStore } from "@/store/auth-store";
 
 export function Header({ title, subtitle }: { title: string; subtitle?: string }) {
+  const user = useAuthStore((state) => state.user);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
+  const initial = user?.name?.slice(0, 1).toUpperCase() ?? "U";
+
   return (
     <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
@@ -17,7 +25,18 @@ export function Header({ title, subtitle }: { title: string; subtitle?: string }
           <Bell className="size-5" />
         </Button>
         <div className="hidden items-center gap-3 md:flex">
-          <div className="grid size-11 place-items-center rounded-full bg-gradient-to-br from-pink-300 to-violet-600 font-bold">A</div>
+          <div className="grid size-11 place-items-center rounded-full bg-gradient-to-br from-pink-300 to-violet-600 font-bold">
+            {isHydrated ? initial : ""}
+          </div>
+          <div className="max-w-44">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-sm font-semibold text-white">
+                {isHydrated ? user?.name ?? "Trader" : "Loading..."}
+              </p>
+              {user?.role ? <Badge>{user.role}</Badge> : null}
+            </div>
+            <p className="truncate text-xs text-zinc-500">{user?.email}</p>
+          </div>
           <ChevronDown className="size-4 text-zinc-300" />
         </div>
       </div>

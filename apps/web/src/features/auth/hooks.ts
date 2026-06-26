@@ -2,9 +2,17 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 
-import { getCurrentUser, login, registerUser } from "@/features/auth/api";
+import {
+  changePassword,
+  getCurrentUser,
+  login,
+  logout,
+  registerUser,
+  resendVerificationEmail,
+  updateProfile,
+} from "@/features/auth/api";
 
-const authKeys = {
+export const authKeys = {
   all: ["auth"] as const,
 
   me: (token: string) => [...authKeys.all, "me", token] as const,
@@ -35,5 +43,30 @@ export function useCurrentUser(token: string | null) {
     staleTime: 60_000,
 
     refetchOnWindowFocus: false,
+  });
+}
+
+export function useUpdateProfile(token: string | null) {
+  return useMutation({
+    mutationFn: (input: { name: string }) => updateProfile(token!, input),
+  });
+}
+
+export function useChangePassword(token: string | null) {
+  return useMutation({
+    mutationFn: (input: { currentPassword: string; newPassword: string }) =>
+      changePassword(token!, input),
+  });
+}
+
+export function useResendVerificationEmail(token: string | null) {
+  return useMutation({
+    mutationFn: () => resendVerificationEmail(token!),
+  });
+}
+
+export function useLogout(token: string | null) {
+  return useMutation({
+    mutationFn: () => logout(token!),
   });
 }

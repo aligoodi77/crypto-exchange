@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
-import { miniChart } from "@/lib/mock-data";
+
+const miniChart = [
+  { value: 20 },
+  { value: 25 },
+  { value: 23 },
+  { value: 31 },
+  { value: 29 },
+  { value: 39 },
+  { value: 35 },
+  { value: 44 },
+];
 
 export function Sparkline({ red = false }: { red?: boolean }) {
   const [mounted, setMounted] = useState(false);

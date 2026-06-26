@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { navItems } from "@/lib/constants";
+import { adminNavItems, navItems } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth-store";
 
-export function MobileNav() {
+export function MobileNav({ admin = false }: { admin?: boolean }) {
   const pathname = usePathname();
-  const items = navItems.slice(0, 5);
+  const user = useAuthStore((state) => state.user);
+  const items =
+    admin && user?.role === "ADMIN" ? adminNavItems.slice(0, 5) : navItems.slice(0, 5);
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-white/10 bg-[#111217]/95 px-2 py-2 pb-5 backdrop-blur md:hidden">

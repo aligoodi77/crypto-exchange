@@ -31,3 +31,17 @@ export type RegisterResult = AuthSession & {
   emailVerificationRequired: boolean;
   verificationEmailSent: boolean;
 };
+
+export type UpdateProfileInput = {
+  name: string;
+};
+
+export type ChangePasswordInput = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+export type ResendVerificationResult = {
+  email: string;
+  expiresAt: string;
+};
