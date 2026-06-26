@@ -4,6 +4,7 @@ export type AuthUser = {
   id: string;
   name: string;
   email: string;
+  avatarUrl: string | null;
   role: AuthRole;
   emailVerified: boolean;
   emailVerifiedAt: string | null;
@@ -34,6 +35,7 @@ export type RegisterResult = AuthSession & {
 
 export type UpdateProfileInput = {
   name: string;
+  avatarUrl?: string | null;
 };
 
 export type ChangePasswordInput = {
@@ -44,4 +46,8 @@ export type ChangePasswordInput = {
 export type ResendVerificationResult = {
   email: string;
   expiresAt: string;
+};
+
+export type VerifyEmailCodeInput = {
+  code: string;
 };

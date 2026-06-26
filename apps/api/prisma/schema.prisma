@@ -28,17 +28,24 @@ enum VerificationTokenType {
   EMAIL_VERIFICATION
 }
 
-model User {
-  id           String @id @default(uuid())
-  name         String
-  email        String @unique
-  passwordHash String
-  role         Role   @default(USER)
-  tokenVersion Int    @default(0)
+enum OAuthProvider {
+  GOOGLE
+  GITHUB
+}
 
+model User {
+  id              String         @id @default(uuid())
+  name            String
+  email           String         @unique
+  passwordHash    String?
+  avatarUrl       String?
+  role            Role           @default(USER)
+  tokenVersion    Int            @default(0)
   emailVerifiedAt DateTime?
 
-  wallet               Wallet?
+  wallet          Wallet?
+  oauthAccounts   OAuthAccount[]
+
   transactions         Transaction[]
   revokedTokens        RevokedToken[]
   verificationTokens   VerificationToken[]
@@ -46,6 +53,21 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model OAuthAccount {
+  id                String        @id @default(uuid())
+  userId            String
+  provider          OAuthProvider
+  providerAccountId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@unique([userId, provider])
 }
 
 model Coin {

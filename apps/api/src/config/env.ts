@@ -44,6 +44,14 @@ const envSchema = z
 
     RESEND_API_KEY: z.string().optional(),
 
+    GOOGLE_CLIENT_ID: z.string().optional(),
+
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+
+    GITHUB_CLIENT_ID: z.string().optional(),
+
+    GITHUB_CLIENT_SECRET: z.string().optional(),
+
     ENABLE_INTERNAL_CRON: z
       .enum(["true", "false"])
       .default("true")
@@ -101,6 +109,10 @@ export const env = {
   emailProvider: parsedEnv.data.EMAIL_PROVIDER,
   emailFrom: parsedEnv.data.EMAIL_FROM,
   resendApiKey: parsedEnv.data.RESEND_API_KEY,
+  googleClientId: parsedEnv.data.GOOGLE_CLIENT_ID,
+  googleClientSecret: parsedEnv.data.GOOGLE_CLIENT_SECRET,
+  githubClientId: parsedEnv.data.GITHUB_CLIENT_ID,
+  githubClientSecret: parsedEnv.data.GITHUB_CLIENT_SECRET,
   emailVerificationTokenTtlMinutes:
     parsedEnv.data.EMAIL_VERIFICATION_TOKEN_TTL_MINUTES,
   enableInternalCron: parsedEnv.data.ENABLE_INTERNAL_CRON,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MailWarning, ShieldCheck } from "lucide-react";
+import { Camera, MailWarning, ShieldCheck } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
@@ -19,10 +19,12 @@ import {
   useLogout,
   useResendVerificationEmail,
   useUpdateProfile,
+  useVerifyEmailCode,
 } from "@/features/auth/hooks";
 import {
   changePasswordSchema,
   updateProfileSchema,
+  verifyEmailCodeSchema,
 } from "@/features/auth/schema";
 
 import { useAuthStore } from "@/store/auth-store";
@@ -39,6 +41,10 @@ export default function ProfilePage() {
 
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(
+    user?.avatarUrl ?? null,
+  );
+  const [verificationCode, setVerificationCode] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -46,17 +52,19 @@ export default function ProfilePage() {
   const updateProfile = useUpdateProfile(token);
   const changePassword = useChangePassword(token);
   const resendVerification = useResendVerificationEmail(token);
+  const verifyEmail = useVerifyEmailCode(token);
   const logout = useLogout(token);
 
   useEffect(() => {
     setName(user?.name ?? "");
     setEmail(user?.email ?? "");
-  }, [user?.email, user?.name]);
+    setAvatarUrl(user?.avatarUrl ?? null);
+  }, [user?.avatarUrl, user?.email, user?.name]);
 
   async function submitProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const parsed = updateProfileSchema.safeParse({ name });
+    const parsed = updateProfileSchema.safeParse({ name, avatarUrl });
 
     if (!parsed.success) {
       showToast({
@@ -137,6 +145,70 @@ export default function ProfilePage() {
     }
   }
 
+  async function submitVerificationCode(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const parsed = verifyEmailCodeSchema.safeParse({ code: verificationCode });
+
+    if (!parsed.success) {
+      showToast({
+        title: "Verification failed",
+        description: parsed.error.issues[0]?.message,
+        tone: "error",
+      });
+      return;
+    }
+
+    try {
+      const updatedUser = await verifyEmail.mutateAsync(parsed.data);
+      if (token) {
+        setSession(token, updatedUser);
+      }
+      setVerificationCode("");
+      showToast({ title: "Email verified", tone: "success" });
+    } catch (error) {
+      showToast({
+        title: "Verification failed",
+        description: isApiError(error) ? error.message : "Please try again.",
+        tone: "error",
+      });
+    }
+  }
+
+  function handleAvatarUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      showToast({
+        title: "Image upload failed",
+        description: "Use a PNG, JPG, or WEBP image.",
+        tone: "error",
+      });
+      return;
+    }
+
+    if (file.size > 350_000) {
+      showToast({
+        title: "Image upload failed",
+        description: "Use an image smaller than 350KB.",
+        tone: "error",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setAvatarUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function handleLogout() {
     try {
       if (token) {
@@ -163,9 +235,30 @@ export default function ProfilePage() {
       <div className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
         <div className="space-y-6">
           <Card className="p-6 text-center">
-            <div className="mx-auto grid size-24 place-items-center rounded-full bg-gradient-to-br from-pink-300 to-violet-600 text-3xl font-bold">
-              {initial}
-            </div>
+            <label className="group relative mx-auto block size-24 cursor-pointer">
+              {avatarUrl ? (
+                <img
+                  alt="Profile"
+                  className="size-24 rounded-full object-cover ring-2 ring-white/10"
+                  height={96}
+                  src={avatarUrl}
+                  width={96}
+                />
+              ) : (
+                <span className="grid size-24 place-items-center rounded-full bg-gradient-to-br from-pink-300 to-violet-600 text-3xl font-bold">
+                  {initial}
+                </span>
+              )}
+              <span className="absolute bottom-0 right-0 grid size-8 place-items-center rounded-full border border-white/10 bg-[#111217] text-white">
+                <Camera className="size-4" />
+              </span>
+              <input
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                onChange={handleAvatarUpload}
+                type="file"
+              />
+            </label>
             <h2 className="mt-4 text-xl font-bold">{user?.name ?? "Trader"}</h2>
             <p className="mt-1 text-sm text-zinc-400">{user?.email}</p>
             <div className="mt-4 flex justify-center gap-2">
@@ -191,6 +284,29 @@ export default function ProfilePage() {
                   <p className="mt-2 text-sm text-zinc-400">
                     Trading is disabled until your email address is verified.
                   </p>
+                  <form
+                    className="mt-4 flex flex-col gap-3 sm:flex-row"
+                    onSubmit={submitVerificationCode}
+                  >
+                    <Input
+                      inputMode="numeric"
+                      maxLength={6}
+                      onChange={(event) =>
+                        setVerificationCode(
+                          event.target.value.replace(/\D/g, "").slice(0, 6),
+                        )
+                      }
+                      placeholder="6-digit code"
+                      value={verificationCode}
+                    />
+                    <Button
+                      disabled={verifyEmail.isPending}
+                      type="submit"
+                      size="sm"
+                    >
+                      {verifyEmail.isPending ? "Checking..." : "Verify"}
+                    </Button>
+                  </form>
                   <Button
                     className="mt-4"
                     disabled={resendVerification.isPending}
@@ -245,7 +361,7 @@ export default function ProfilePage() {
                 </span>
               </label>
 
-              <Button disabled={updateProfile.isPending} type="submit">
+                <Button disabled={updateProfile.isPending} type="submit">
                 {updateProfile.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </form>

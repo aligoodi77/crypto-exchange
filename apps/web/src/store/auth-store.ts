@@ -31,6 +31,7 @@ function isAuthUser(value: unknown): value is AuthUser {
     typeof value.id === "string" &&
     typeof value.name === "string" &&
     typeof value.email === "string" &&
+    (typeof value.avatarUrl === "string" || value.avatarUrl === null) &&
     (value.role === "USER" || value.role === "ADMIN") &&
     typeof value.emailVerified === "boolean" &&
     (typeof value.emailVerifiedAt === "string" ||

@@ -5,7 +5,7 @@ import { app } from "../app.js";
 const validUser = {
   name: "Ali Goudarzi",
   email: "Ali.Test@Example.com",
-  password: "123456",
+  password: "Test@1234",
 };
 
 async function registerTestUser() {
@@ -87,7 +87,7 @@ describe("Auth endpoints", () => {
 
     const response = await request(app).post("/api/auth/login").send({
       email: "ALI.TEST@EXAMPLE.COM",
-      password: "123456",
+      password: "Test@1234",
     });
 
     expect(response.status).toBe(200);
@@ -181,8 +181,8 @@ describe("Auth endpoints", () => {
       .patch("/api/auth/me/password")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        currentPassword: "123456",
-        newPassword: "new-password-123",
+        currentPassword: "Test@1234",
+        newPassword: "New-password@123",
       });
 
     expect(changePasswordResponse.status).toBe(200);
@@ -202,7 +202,7 @@ describe("Auth endpoints", () => {
       .post("/api/auth/login")
       .send({
         email: validUser.email,
-        password: "new-password-123",
+      password: "New-password@123",
       });
 
     expect(loginWithNewPassword.status).toBe(200);

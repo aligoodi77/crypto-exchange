@@ -2,7 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import { AppError } from "../utils/app-error.js";
 import { env } from "../config/env.js";
 import {
-  createRawVerificationToken,
+  createVerificationCode,
   hashVerificationToken,
 } from "../utils/verification-token.js";
 import { sendVerificationEmail } from "./email.service.js";
@@ -37,8 +37,8 @@ export async function createAndSendVerificationEmail(userId: string) {
     throw new AppError("Email is already verified", 400);
   }
 
-  const rawToken = createRawVerificationToken();
-  const tokenHash = hashVerificationToken(rawToken);
+  const rawCode = createVerificationCode();
+  const tokenHash = hashVerificationToken(rawCode);
   const expiresAt = getTokenExpiryDate();
 
   await prisma.$transaction(async (tx) => {
@@ -62,11 +62,65 @@ export async function createAndSendVerificationEmail(userId: string) {
   await sendVerificationEmail({
     to: user.email,
     name: user.name,
-    verificationToken: rawToken,
+    verificationCode: rawCode,
   });
 
   return {
+    email: user.email,
     expiresAt,
+  };
+}
+
+export async function verifyEmailByCode(userId: string, rawCode: string) {
+  const tokenHash = hashVerificationToken(rawCode);
+
+  const verificationToken = await prisma.verificationToken.findFirst({
+    where: {
+      userId,
+      tokenHash,
+      type: "EMAIL_VERIFICATION",
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  if (!verificationToken) {
+    throw new AppError("Invalid or expired verification code", 400);
+  }
+
+  if (verificationToken.expiresAt.getTime() < Date.now()) {
+    await prisma.verificationToken.delete({
+      where: {
+        id: verificationToken.id,
+      },
+    });
+
+    throw new AppError("Verification code has expired", 400);
+  }
+
+  const verifiedAt = new Date();
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: {
+        id: verificationToken.userId,
+      },
+      data: {
+        emailVerifiedAt: verifiedAt,
+      },
+    });
+
+    await tx.verificationToken.delete({
+      where: {
+        id: verificationToken.id,
+      },
+    });
+  });
+
+  return {
+    email: verificationToken.user.email,
+    emailVerifiedAt: verifiedAt,
   };
 }
 

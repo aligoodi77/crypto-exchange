@@ -10,6 +10,7 @@ import type {
   RegisterResult,
   ResendVerificationResult,
   UpdateProfileInput,
+  VerifyEmailCodeInput,
 } from "@/features/auth/types";
 
 export async function login(input: LoginInput): Promise<AuthSession> {
@@ -55,6 +56,20 @@ export async function updateProfile(
   });
 
   return response.data;
+}
+
+export async function verifyEmailCode(
+  token: string,
+  input: VerifyEmailCodeInput,
+): Promise<AuthUser> {
+  await apiClient.post<
+    ApiSuccessResponse<{ email: string; emailVerifiedAt: string }>,
+    VerifyEmailCodeInput
+  >("/api/auth/verify-email", input, {
+    token,
+  });
+
+  return getCurrentUser(token);
 }
 
 export async function changePassword(

@@ -4,12 +4,8 @@ import { env } from "../config/env.js";
 type SendVerificationEmailInput = {
   to: string;
   name: string;
-  verificationToken: string;
+  verificationCode: string;
 };
-
-function getVerificationLink(token: string) {
-  return `${env.frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
-}
 
 function escapeHtml(value: string) {
   return value
@@ -23,18 +19,16 @@ function escapeHtml(value: string) {
 export async function sendVerificationEmail({
   to,
   name,
-  verificationToken,
+  verificationCode,
 }: SendVerificationEmailInput) {
-  const verificationLink = getVerificationLink(verificationToken);
-
   if (env.emailProvider === "console") {
     console.log("\n[email-verification]");
     console.log(`To: ${to}`);
-    console.log(`Verify link: ${verificationLink}\n`);
+    console.log(`Code: ${verificationCode}\n`);
 
     return {
       provider: "console" as const,
-      verificationLink,
+      verificationCode,
     };
   }
 
@@ -54,15 +48,10 @@ export async function sendVerificationEmail({
       <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto;">
         <h2>Welcome to CryptoX, ${safeName}</h2>
         <p>Please verify your email address to activate trading.</p>
-        <p>
-          <a
-            href="${verificationLink}"
-            style="display: inline-block; padding: 12px 18px; background: #111827; color: #ffffff; text-decoration: none; border-radius: 8px;"
-          >
-            Verify Email
-          </a>
+        <p style="font-size: 32px; letter-spacing: 8px; font-weight: 700; color: #111827;">
+          ${verificationCode}
         </p>
-        <p>This verification link expires in 60 minutes.</p>
+        <p>This verification code expires in ${env.emailVerificationTokenTtlMinutes} minutes.</p>
         <p>If you did not create this account, you can ignore this email.</p>
       </div>
     `,

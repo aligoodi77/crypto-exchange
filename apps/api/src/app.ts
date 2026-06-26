@@ -26,7 +26,7 @@ app.disable("x-powered-by");
 
 app.use(helmet());
 app.use(cors(corsOptions));
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_req, res) => {
   res.json({

@@ -10,6 +10,7 @@ import {
   registerUser,
   resendVerificationEmail,
   updateProfile,
+  verifyEmailCode,
 } from "@/features/auth/api";
 
 export const authKeys = {
@@ -62,6 +63,12 @@ export function useChangePassword(token: string | null) {
 export function useResendVerificationEmail(token: string | null) {
   return useMutation({
     mutationFn: () => resendVerificationEmail(token!),
+  });
+}
+
+export function useVerifyEmailCode(token: string | null) {
+  return useMutation({
+    mutationFn: (input: { code: string }) => verifyEmailCode(token!, input),
   });
 }
 
