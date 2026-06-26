@@ -1,21 +1,58 @@
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { formatCryptoAmount, formatUsd } from "@/features/wallet/formatters";
 
-const rows = ["68,743.21", "68,743.02", "68,742.80", "68,742.61", "68,742.42"];
+function createRows(price: number, side: "ask" | "bid") {
+  return Array.from({ length: 6 }).map((_, index) => {
+    const direction = side === "ask" ? 1 : -1;
+    const rowPrice = price * (1 + direction * (index + 1) * 0.0009);
+    const amount = 0.015 + index * 0.012;
 
-export function OrderBook() {
+    return {
+      price: rowPrice,
+      amount,
+      total: rowPrice * amount,
+    };
+  });
+}
+
+export function OrderBook({
+  price,
+  symbol,
+}: {
+  price: string | number;
+  symbol: string;
+}) {
+  const currentPrice = Number(price);
+  const asks = createRows(currentPrice, "ask").reverse();
+  const bids = createRows(currentPrice, "bid");
+
   return (
     <Card className="p-4">
-      <h2 className="mb-4 font-semibold">Order Book</h2>
-      <div className="grid grid-cols-3 pb-2 text-xs text-zinc-500"><span>Price</span><span>Amount</span><span>Total</span></div>
-      {rows.map((price, index) => (
-        <div key={price} className="grid grid-cols-3 py-1.5 text-sm">
-          <span className="text-red-400">{price}</span><span>0.{index + 12}48</span><span>{(8581 + index * 2112).toLocaleString()}</span>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="font-semibold">Order Book</h2>
+        <Badge className="bg-amber-500/15 text-amber-300">Demo</Badge>
+      </div>
+      <div className="grid grid-cols-3 pb-2 text-xs text-zinc-500">
+        <span>Price</span>
+        <span>Amount</span>
+        <span>Total</span>
+      </div>
+      {asks.map((row) => (
+        <div className="grid grid-cols-3 py-1.5 text-sm" key={`ask-${row.price}`}>
+          <span className="text-red-400">{formatUsd(row.price)}</span>
+          <span>{formatCryptoAmount(row.amount)} {symbol}</span>
+          <span>{formatUsd(row.total)}</span>
         </div>
       ))}
-      <div className="my-3 text-2xl font-bold text-red-400">68,742.31</div>
-      {rows.map((price, index) => (
-        <div key={`${price}-b`} className="grid grid-cols-3 py-1.5 text-sm">
-          <span className="text-emerald-400">{price.replace("3", "1")}</span><span>0.{index + 21}34</span><span>{(14651 + index * 1440).toLocaleString()}</span>
+      <div className="my-3 text-2xl font-bold text-white">
+        {formatUsd(currentPrice)}
+      </div>
+      {bids.map((row) => (
+        <div className="grid grid-cols-3 py-1.5 text-sm" key={`bid-${row.price}`}>
+          <span className="text-emerald-400">{formatUsd(row.price)}</span>
+          <span>{formatCryptoAmount(row.amount)} {symbol}</span>
+          <span>{formatUsd(row.total)}</span>
         </div>
       ))}
     </Card>

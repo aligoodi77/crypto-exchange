@@ -6,7 +6,7 @@ export async function getMyTransactions(
   userId: string,
   query: TransactionsQuery,
 ) {
-  const { page, limit, type } = query;
+  const { page, limit, status, type } = query;
 
   const skip = (page - 1) * limit;
 
@@ -16,6 +16,10 @@ export async function getMyTransactions(
 
   if (type) {
     where.type = type;
+  }
+
+  if (status) {
+    where.status = status;
   }
 
   const [transactions, total] = await prisma.$transaction([

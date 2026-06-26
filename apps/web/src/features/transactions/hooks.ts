@@ -12,6 +12,7 @@ function normalizeTransactionsParams(params: TransactionsParams = {}) {
     page: params.page ?? 1,
     limit: params.limit ?? 10,
     ...(params.type ? { type: params.type } : {}),
+    ...(params.status ? { status: params.status } : {}),
   };
 }
 

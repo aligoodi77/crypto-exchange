@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
@@ -40,18 +40,10 @@ export default function TransactionsPage() {
     page,
     limit: PAGE_SIZE,
     type: typeFilter === "ALL" ? undefined : typeFilter,
+    status: statusFilter === "ALL" ? undefined : statusFilter,
   });
 
-  const transactions = useMemo(() => {
-    const items = transactionsQuery.data?.items ?? [];
-
-    if (statusFilter === "ALL") {
-      return items;
-    }
-
-    return items.filter((transaction) => transaction.status === statusFilter);
-  }, [statusFilter, transactionsQuery.data?.items]);
-
+  const transactions = transactionsQuery.data?.items ?? [];
   const pagination = transactionsQuery.data?.pagination;
 
   function updateTypeFilter(nextType: TypeFilter) {

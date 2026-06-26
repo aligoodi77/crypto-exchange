@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Star } from "lucide-react";
 import { useParams } from "next/navigation";
 
@@ -22,12 +23,13 @@ import {
 import { useMarkets } from "@/features/markets/hooks";
 import type { MarketCoin } from "@/features/markets/types";
 
-import {
-  formatCryptoAmount,
-} from "@/features/wallet/formatters";
+import { formatCryptoAmount } from "@/features/wallet/formatters";
 import { useMyWallet } from "@/features/wallet/hooks";
+import type { WalletAsset } from "@/features/wallet/types";
+import { useMyTransactions } from "@/features/transactions/hooks";
 
 import { useAuthStore } from "@/store/auth-store";
+import { useWatchlistStore } from "@/store/watchlist-store";
 
 function normalizeSymbol(value: string) {
   return value
@@ -50,11 +52,26 @@ export default function TradePage() {
     sortOrder: "desc",
   });
   const walletQuery = useMyWallet(token, user?.id ?? null);
+  const recentTradesQuery = useMyTransactions(token, user?.id ?? null, {
+    page: 1,
+    limit: 20,
+  });
 
   const coin =
     marketsQuery.data?.data.find(
       (marketCoin) => marketCoin.symbol.toUpperCase() === routeSymbol,
     ) ?? null;
+  const walletAsset =
+    coin && walletQuery.data
+      ? walletQuery.data.assets.find((asset) => asset.coin.symbol === coin.symbol) ??
+        null
+      : null;
+  const assetTrades =
+    coin && recentTradesQuery.data
+      ? recentTradesQuery.data.items
+          .filter((transaction) => transaction.coin?.symbol === coin.symbol)
+          .slice(0, 10)
+      : [];
 
   return (
     <AppShell title="Trade" subtitle="Spot market buy and sell">
@@ -77,21 +94,20 @@ export default function TradePage() {
             <TradeHeader coin={coin} />
 
             <div className="grid gap-5 xl:grid-cols-[1.4fr_320px_320px]">
-              <TradingChart />
-              <OrderBook />
-              <TradeHistory />
+              <TradingChart change24h={coin.change24h} price={coin.price} />
+              <OrderBook price={coin.price} symbol={coin.symbol} />
+              <TradeHistory
+                isLoading={recentTradesQuery.isPending}
+                transactions={assetTrades}
+              />
             </div>
 
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
               <BuySellForm coin={coin} wallet={walletQuery.data ?? null} />
 
               <AssetSummary
+                asset={walletAsset}
                 coin={coin}
-                cryptoAmount={
-                  walletQuery.data?.assets.find(
-                    (asset) => asset.coin.symbol === coin.symbol,
-                  )?.amount ?? "0"
-                }
                 isLoading={walletQuery.isPending}
               />
             </div>
@@ -111,6 +127,16 @@ export default function TradePage() {
 
 function TradeHeader({ coin }: { coin: MarketCoin }) {
   const positive = isPositive(coin.change24h);
+  const hydrateWatchlist = useWatchlistStore((state) => state.hydrate);
+  const isHydrated = useWatchlistStore((state) => state.isHydrated);
+  const isWatched = useWatchlistStore((state) => state.isWatched(coin.symbol));
+  const toggleWatchlist = useWatchlistStore((state) => state.toggle);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      hydrateWatchlist();
+    }
+  }, [hydrateWatchlist, isHydrated]);
 
   return (
     <Card className="grid gap-4 p-4 md:grid-cols-[1fr_repeat(5,auto)] md:items-center">
@@ -155,26 +181,39 @@ function TradeHeader({ coin }: { coin: MarketCoin }) {
         Updated {new Date(coin.updatedAt).toLocaleTimeString()}
       </div>
 
-      <Star className="size-5 text-zinc-400" />
+      <button
+        aria-label={isWatched ? "Remove from watchlist" : "Add to watchlist"}
+        className={
+          isWatched
+            ? "text-yellow-300 transition hover:text-yellow-200"
+            : "text-zinc-400 transition hover:text-white"
+        }
+        onClick={() => toggleWatchlist(coin.symbol)}
+        type="button"
+      >
+        <Star className={isWatched ? "size-5 fill-current" : "size-5"} />
+      </button>
     </Card>
   );
 }
 
 function AssetSummary({
+  asset,
   coin,
-  cryptoAmount,
   isLoading,
 }: {
+  asset: WalletAsset | null;
   coin: MarketCoin;
-  cryptoAmount: string;
   isLoading: boolean;
 }) {
+  const cryptoAmount = asset?.amount ?? "0";
   const amount = Number(cryptoAmount);
   const value = amount * Number(coin.price);
+  const positiveProfit = asset ? isPositive(asset.profitLoss) : true;
 
   return (
     <Card className="p-5">
-      <h2 className="font-semibold">Asset Summary</h2>
+      <h2 className="font-semibold">You Own</h2>
 
       {isLoading ? (
         <div className="mt-6 space-y-3">
@@ -187,6 +226,34 @@ function AssetSummary({
           <p className="mt-2 text-sm text-zinc-400">
             {formatCryptoAmount(cryptoAmount)} {coin.symbol} available
           </p>
+          <div className="mt-5 space-y-3 rounded-xl border border-white/10 bg-white/4 p-3 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-zinc-400">Average buy price</span>
+              <span className="font-medium text-white">
+                {asset ? formatUsd(asset.averageBuyPrice) : "—"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-zinc-400">Unrealized P/L</span>
+              <span
+                className={
+                  positiveProfit ? "font-medium text-emerald-400" : "font-medium text-red-400"
+                }
+              >
+                {asset ? formatUsd(asset.profitLoss) : "—"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-zinc-400">P/L percent</span>
+              <span
+                className={
+                  positiveProfit ? "font-medium text-emerald-400" : "font-medium text-red-400"
+                }
+              >
+                {asset ? formatPercent(asset.profitLossPercent) : "—"}
+              </span>
+            </div>
+          </div>
           <p
             className={
               isPositive(coin.change24h)

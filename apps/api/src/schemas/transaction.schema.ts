@@ -6,6 +6,8 @@ export const transactionsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(10),
 
   type: z.enum(["BUY", "SELL"]).optional(),
+
+  status: z.enum(["PENDING", "SUCCESS", "FAILED"]).optional(),
 });
 
 export type TransactionsQuery = z.infer<typeof transactionsQuerySchema>;

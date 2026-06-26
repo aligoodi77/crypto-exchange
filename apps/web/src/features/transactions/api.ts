@@ -44,6 +44,7 @@ export type TransactionsParams = {
   page?: number;
   limit?: number;
   type?: "BUY" | "SELL";
+  status?: TransactionStatus;
 };
 
 export async function getMyTransactions(
@@ -57,6 +58,10 @@ export async function getMyTransactions(
 
   if (params.type) {
     searchParams.set("type", params.type);
+  }
+
+  if (params.status) {
+    searchParams.set("status", params.status);
   }
 
   const response = await apiClient.get<
