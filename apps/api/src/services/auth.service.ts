@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import { resolveMx } from "node:dns/promises";
 import { prisma } from "../lib/prisma.js";
 import { signToken } from "../utils/jwt.js";
 import type {
@@ -14,6 +15,31 @@ import { env } from "../config/env.js";
 const SALT_ROUNDS = 10;
 
 type OAuthProvider = "GOOGLE" | "GITHUB";
+
+async function assertEmailDomainCanReceiveMail(email: string) {
+  const domain = email.split("@")[1];
+
+  if (!domain) {
+    throw new AppError("Invalid email address", 400);
+  }
+
+  try {
+    const records = await resolveMx(domain);
+
+    if (
+      records.length === 0 ||
+      records.every((record) => record.exchange === ".")
+    ) {
+      throw new AppError("Email address domain cannot receive email", 400);
+    }
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    throw new AppError("Email address domain cannot receive email", 400);
+  }
+}
 
 function sanitizeUser(user: {
   id: string;
@@ -39,6 +65,8 @@ function sanitizeUser(user: {
 }
 
 export async function registerUser(input: RegisterInput) {
+  await assertEmailDomainCanReceiveMail(input.email);
+
   const existingUser = await prisma.user.findUnique({
     where: {
       email: input.email,
